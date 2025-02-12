@@ -10,11 +10,18 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@headlessui/vue": "^1.7.23",
+    "@heroicons/vue": "^2.2.0",
+    "lucide-vue-next": "^0.475.0",
     "vue": "^3.4.27"
   },
   "devDependencies": {
-    "typescript": "5.3.3",
-    "extension": "latest"
+    "autoprefixer": "^10.4.20",
+    "extension": "latest",
+    "postcss": "^8.5.2",
+    "tailwindcss": "^3.4.17",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "5.3.3"
   },
   "scripts": {
     "dev": "extension dev",

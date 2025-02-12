@@ -7,8 +7,9 @@
   "icons": {
     "48": "images/extension_48.png"
   },
+  "permissions": ["tabs", "storage"],
   "chrome_url_overrides": {
-    "newtab": "newtab/index.html"
+    "newtab": "src/index.html"
   },
   "author": "Your Name"
 }
