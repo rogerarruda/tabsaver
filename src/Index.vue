@@ -117,18 +117,38 @@ const loadOpenTabs = () => {
   })
 }
 
-const saveCurrentTabs = () => {
+const saveCurrentTabs = async () => {
   const newCollection = {
     name: `Session ${new Date().toLocaleString()}`,
     tabs: openTabs.value.map(tab => ({ title: tab.title, url: tab.url })),
     date: new Date().toISOString()
   }
-  chrome.storage.local.get({ collections: [] }, (data) => {
-    const updatedCollections = [...data.collections, newCollection]
-    chrome.storage.local.set({ collections: updatedCollections }, () => {
-      loadSavedCollections()
+
+  await new Promise((resolve) => {
+    chrome.storage.local.get({ collections: [] }, (data) => {
+      const updatedCollections = [...data.collections, newCollection]
+      chrome.storage.local.set({ collections: updatedCollections }, () => {
+        loadSavedCollections()
+        resolve(null)
+      })
     })
   })
+
+  const currentTab = await new Promise<chrome.tabs.Tab>((resolve) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      resolve(tabs[0])
+    })
+  })
+
+  const tabsToClose = openTabs.value
+    .filter(tab => tab.id !== currentTab.id)
+    .map(tab => tab.id)
+
+  if (tabsToClose.length > 0) {
+    chrome.tabs.remove(tabsToClose as number[], () => {
+      loadOpenTabs() 
+    })
+  }
 }
 
 const loadSavedCollections = () => {
