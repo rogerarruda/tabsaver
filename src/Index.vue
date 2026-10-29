@@ -8,6 +8,7 @@ import brandIcon from '../images/tabsaver-icon.svg'
 import type { Snapshot } from './backup'
 import { usePreferences } from './preferences'
 
+import { writeCollectionData } from './collection-storage'
 import { readCollections, writeCollections, appendTabs, replaceTabs, moveSavedTab, manualTab } from './collections'
 import type { Tab, Collection } from './collections'
 const openTabs = ref<Tab[]>([])
@@ -31,6 +32,7 @@ const loading = ref(true)
 const message = ref('')
 const error = ref('')
 const storageUnavailable = ref(false)
+const lastDeleted = ref<{ entry: unknown; index: number } | null>(null)
 const { language, theme, locale, t, loadPreferences, applyPreferences, flushPreferences } = usePreferences(text => error.value = text)
 let noticeTimer: ReturnType<typeof setTimeout>
 const extension = typeof chrome !== 'undefined' && !!chrome.storage?.local && !!chrome.tabs
@@ -44,11 +46,10 @@ async function refreshTabs() {
   if (!extension) return
   try { const tabs = await chrome.tabs.query({ currentWindow: true }); openTabs.value = tabs.filter(t => t.url && !t.url.startsWith('chrome-extension://') && !t.url.startsWith('chrome://newtab')).map(t => ({ id: t.id, title: t.title || t.url!, url: t.url! })) } catch { error.value = t('Não foi possível carregar as abas. Recarregue esta página.') }
 }
-async function persist(next: Collection[], keepExpanded = false) {
+async function persist(next: Collection[], keepExpanded = false, extra: Record<string, unknown> = {}) {
   if (storageUnavailable.value) throw new Error('Storage could not be read safely')
   const stored = writeCollections(next)
-  if (extension) await chrome.storage.local.set({ collections: stored })
-  else localStorage.setItem('tabsaver-preview', JSON.stringify(stored))
+  await writeCollectionData(stored, extra)
   collections.value = readCollections(stored)
   if (!keepExpanded) { selected.value = 'all'; expanded.value = [] }
 }
@@ -86,8 +87,22 @@ async function openTab(url: string) { try { if (extension) await chrome.tabs.cre
 async function restore(collection: Collection) { for (const tab of collection.tabs) await openTab(tab.url); notify(t('{count} abas abertas.', { count: collection.tabs.length })) }
 async function closeTab(tab: Tab) { try { if (extension && tab.id !== undefined) { await chrome.tabs.remove(tab.id); await refreshTabs() } } catch { error.value = t('Não foi possível fechar esta aba.') } }
 async function remove(collection: Collection) {
-  if (!window.confirm(t('Excluir a coleção “{name}” com {count} abas?', { name: collection.name, count: collection.tabs.length }))) return
-  try { await persist(collections.value.filter(c => c.key !== collection.key)); if (selected.value === collection.key) selected.value = 'all'; notify(t('Coleção excluída.')) } catch { error.value = t('Não foi possível excluir a coleção.') }
+  if (busy.value) return
+  busy.value = true
+  try {
+    const recovery = { entry: writeCollections([collection])[0], index: collections.value.findIndex(c => c.key === collection.key) }
+    await persist(collections.value.filter(c => c.key !== collection.key), false, { lastDeleted: recovery })
+    lastDeleted.value = recovery; notify(t('Coleção excluída. Você pode desfazer.'))
+  } catch { error.value = t('Não foi possível excluir a coleção.') } finally { busy.value = false }
+}
+async function undoDelete() {
+  if (!lastDeleted.value || busy.value) return
+  busy.value = true
+  try {
+    const raw = writeCollections(collections.value)
+    raw.splice(Math.min(Math.max(lastDeleted.value.index, 0), raw.length), 0, lastDeleted.value.entry)
+    await persist(readCollections(raw), false, { lastDeleted: null }); lastDeleted.value = null; notify(t('Coleção recuperada.'))
+  } catch { error.value = t('Não foi possível recuperar a coleção.') } finally { busy.value = false }
 }
 async function deleteSavedTab(collection: Collection, index: number) {
   if (busy.value) return
@@ -116,12 +131,12 @@ function loadCollections(value: unknown) {
   catch { storageUnavailable.value = true; error.value = t('Não foi possível carregar suas coleções. Recarregue para tentar novamente.') }
 }
 function backupRestored(snapshot: Snapshot) { loadCollections(snapshot.collections); applyPreferences(snapshot.preferences); selected.value = 'all'; expanded.value = []; query.value = ''; error.value = '' }
-function storageChanged(changes: { [key: string]: chrome.storage.StorageChange }, area: string) { if (area === 'local' && changes.collections) loadCollections(changes.collections.newValue ?? []) }
+function storageChanged(changes: { [key: string]: chrome.storage.StorageChange }, area: string) { if (area === 'local') { if (changes.collections) loadCollections(changes.collections.newValue ?? []); if (changes.lastDeleted) lastDeleted.value = changes.lastDeleted.newValue || null } }
 onMounted(async () => {
   await loadPreferences()
   try {
-    if (extension) { const data = await chrome.storage.local.get({ collections: [] }); loadCollections(data.collections); await refreshTabs(); chrome.tabs.onCreated.addListener(refreshTabs); chrome.tabs.onRemoved.addListener(refreshTabs); chrome.tabs.onUpdated.addListener(refreshTabs); chrome.storage.onChanged.addListener(storageChanged) }
-    else loadCollections(JSON.parse(localStorage.getItem('tabsaver-preview') || '[]'))
+    if (extension) { const data = await chrome.storage.local.get({ collections: [], lastDeleted: null }); loadCollections(data.collections); lastDeleted.value = data.lastDeleted; await refreshTabs(); chrome.tabs.onCreated.addListener(refreshTabs); chrome.tabs.onRemoved.addListener(refreshTabs); chrome.tabs.onUpdated.addListener(refreshTabs); chrome.storage.onChanged.addListener(storageChanged) }
+    else { loadCollections(JSON.parse(localStorage.getItem('tabsaver-preview') || '[]')); lastDeleted.value = JSON.parse(localStorage.getItem('tabsaver-lastDeleted') || 'null') }
   } catch { storageUnavailable.value = true; error.value = t('Não foi possível carregar suas coleções. Recarregue para tentar novamente.') } finally { loading.value = false }
 })
 onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.onCreated.removeListener(refreshTabs); chrome.tabs.onRemoved.removeListener(refreshTabs); chrome.tabs.onUpdated.removeListener(refreshTabs); chrome.storage.onChanged.removeListener(storageChanged) } })
@@ -153,7 +168,7 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
         <BackupTools :t="t" :locale="locale" :flush-preferences="flushPreferences" @restored="backupRestored" @notice="notify" @modal="backupDialog = $event" />
         <div class="content-layout">
           <section class="collections-section">
-            <div class="section-heading"><h2>{{ heading }} <span>{{ visible.length }}</span></h2><label class="sort-label"><span class="sr-only">{{ t('Ordenar coleções') }}</span><select v-model="sort"><option value="newest">{{ t('Mais recentes') }}</option><option value="oldest">{{ t('Mais antigas') }}</option><option value="name">{{ t('Nome A–Z') }}</option></select><ChevronDown :size="14" /></label></div>
+            <div v-if="lastDeleted" class="undo-banner" role="status"><span>{{ t('Uma coleção foi excluída.') }}</span><button class="text-button" :disabled="busy" @click="undoDelete">{{ t('Desfazer exclusão') }}</button></div><div class="section-heading"><h2>{{ heading }} <span>{{ visible.length }}</span></h2><label class="sort-label"><span class="sr-only">{{ t('Ordenar coleções') }}</span><select v-model="sort"><option value="newest">{{ t('Mais recentes') }}</option><option value="oldest">{{ t('Mais antigas') }}</option><option value="name">{{ t('Nome A–Z') }}</option></select><ChevronDown :size="14" /></label></div>
             <label class="search-field"><Search :size="18" /><input v-model="query" :placeholder="t('Buscar coleções ou abas…')" :aria-label="t('Buscar coleções ou abas')" /><button v-if="query" class="icon-button" :aria-label="t('Limpar busca')" @click="query = ''"><X :size="16" /></button></label>
             <div v-if="loading" class="empty-state" role="status">{{ t('Carregando suas coleções…') }}</div>
             <div v-else-if="!visible.length" class="empty-state"><span class="empty-icon"><component :is="query ? Search : Layers" :size="30" /></span><h3>{{ query ? t('Nenhum resultado por aqui') : t('Suas próximas ideias moram aqui') }}</h3><p>{{ query ? t('Tente outro nome, site ou palavra-chave.') : t('Salve as abas abertas ou crie uma coleção para começar a organizar seu espaço.') }}</p><button class="button" @click="query ? query = '' : startEdit()"><Plus v-if="!query" :size="17" />{{ query ? t('Limpar busca') : t('Criar primeira coleção') }}</button></div>

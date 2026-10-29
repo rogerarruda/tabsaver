@@ -1,5 +1,11 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  "Coleção excluída. Você pode desfazer.": "Collection deleted. You can undo this.",
+  "Coleção recuperada.": "Collection recovered.",
+  "Não foi possível recuperar a coleção.": "Could not recover the collection.",
+  "Uma coleção foi excluída.": "A collection was deleted.",
+  "Desfazer exclusão": "Undo deletion",
+
   "Aba removida da coleção.": "Tab removed from collection.",
   "Não foi possível editar esta coleção. Os dados foram preservados.": "Could not edit this collection. Your data has been preserved.",
   "Aba movida.": "Tab moved.",
