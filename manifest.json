@@ -13,7 +13,8 @@
   "permissions": [
     "tabs",
     "storage",
-    "favicon"
+    "favicon",
+    "contextMenus"
   ],
   "action": {
     "default_title": "Abrir TabSaver",

@@ -70,3 +70,14 @@ test('duplicates compare normalized URLs while preserving query and fragment dif
   assert.equal(api.uniqueTabs(tabs, [tab]).length, 2)
   assert.equal(tabs.length, 4)
 })
+
+test('context menu quick saves preserve all collections and skip duplicate links', () => {
+  const original = [{ name: 'Other', tabs: 42 }]
+  const first = api.quickSave(original, tab, 'Quick saves')
+  const second = api.quickSave(first, tab, 'Quick saves')
+  assert.equal(second.length, 2)
+  assert.deepEqual(second[0], original[0])
+  assert.equal(second[1].tabs.length, 1)
+  assert.equal(second[1].quickSave, true)
+  assert.throws(() => api.quickSave([{ quickSave: true, tabs: 42 }], tab, 'Quick saves'))
+})

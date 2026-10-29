@@ -85,3 +85,12 @@ export function uniqueTabs(tabs: Tab[], existing: Tab[] = []): Tab[] {
   const seen = new Set(existing.map(tab => urlKey(tab.url)))
   return tabs.filter(tab => { const key = urlKey(tab.url); if (seen.has(key)) return false; seen.add(key); return true })
 }
+
+export function quickSave(collections: unknown[], tab: Tab, name: string): unknown[] {
+  const result = [...collections]
+  const index = result.findIndex(item => record(item) && item.quickSave === true)
+  if (index < 0) return [...result, { name, date: new Date().toISOString(), tabs: [{ title: tab.title, url: tab.url }], quickSave: true }]
+  const collection = readCollections([result[index]])[0]
+  result[index] = writeCollections([appendTabs(collection, uniqueTabs([tab], collection.tabs))])[0]
+  return result
+}
