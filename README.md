@@ -133,3 +133,42 @@ O botão **Configurar nova aba**, no topo, abre a primeira etapa do tutorial com
 ajuda de configuração expandida. Na extensão instalada, oferece acesso direto aos
 detalhes do TabSaver no Chrome. O botão orienta o usuário; não força a ativação do
 override, cuja configuração é controlada pelo Chrome e pelo manifesto.
+
+## Organização e salvamento
+
+- Marque as abas que deseja guardar e escolha **Salvar em**: nova sessão ou uma
+  coleção existente. **Fechar abas após salvar** é opcional e inclui somente as
+  abas selecionadas. Falhas no armazenamento impedem o fechamento.
+- **Ignorar abas duplicadas** evita repetir endereços no destino. Ao abrir uma
+  coleção, endereços já presentes na janela e duplicados internos são ignorados.
+  Consultas e fragmentos diferentes continuam sendo tratados como páginas distintas.
+- Expanda **Ver abas** para adicionar um endereço HTTP/HTTPS, remover uma aba ou
+  movê-la para outra coleção. Os movimentos são gravados em uma única operação.
+- A estrela marca favoritos, que aparecem primeiro; o filtro **Favoritos** mostra
+  somente essas coleções. O lápis permite editar nome e etiquetas separadas por
+  vírgula. A busca também procura nas etiquetas.
+- **Desfazer exclusão** recupera a última coleção excluída, inclusive após recarregar.
+  Uma nova exclusão substitui essa cópia. Restaurar um backup limpa essa opção para
+  evitar misturar uma exclusão anterior com os dados importados.
+- O lembrete de backup compara os dados com a última exportação preparada. É possível
+  adiar até amanhã. O navegador inicia o download; o TabSaver não confirma se o usuário
+  efetivamente guardou o arquivo. A indicação usa “Última exportação preparada”.
+- Os ícones dos sites vêm do cache de favicons do Chrome, usando a permissão `favicon`;
+  não é usado serviço externo de imagens. Sem ícone disponível, aparece uma inicial.
+- Com a permissão `contextMenus`, o menu de contexto oferece salvar a página ou um link
+  em **Salvos rápidos**, sem fechar a aba. O selo ✓ indica sucesso; ! indica falha.
+- Coleções antigas incompatíveis exibem explicação e dados originais, com opção de
+  copiar para diagnóstico. A edição de abas fica bloqueada nesses casos, mas os dados
+  são preservados no backup e nas alterações às outras coleções.
+
+Google Drive permanece em espera por decisão do usuário. Não há sincronização em nuvem ativa.
+
+### Verificação das melhorias
+
+Execute `npm test` para gerar a extensão e executar os testes. Os testes do worker
+usam o manifesto e o código de produção gerados, com a API Chrome simulada.
+O registro `design-review/improvements-review.json` descreve as conferências da
+interface e os limites de verificação. As capturas usam somente dados fictícios.
+
+Referências das APIs: https://developer.chrome.com/docs/extensions/how-to/ui/favicons
+ e https://developer.chrome.com/docs/extensions/reference/api/contextMenus

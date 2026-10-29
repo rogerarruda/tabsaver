@@ -26,6 +26,7 @@
   "scripts": {
     "dev": "extension dev",
     "start": "extension start",
-    "build": "extension build"
+    "build": "extension build",
+    "test": "npm run build && node --test tests/*.test.cjs"
   }
 }

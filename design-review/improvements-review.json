@@ -1,0 +1,57 @@
+{
+  "contract": "Concluir cada melhoria autorizada com commit próprio, preservando dados antigos. Google Drive explicitamente adiado.",
+  "completed": [
+    "Salvar em coleção existente",
+    "Selecionar abas e manter abertas opcionalmente",
+    "Adicionar, remover e mover abas",
+    "Desfazer última exclusão persistente",
+    "Favoritos e etiquetas",
+    "Evitar duplicatas ao salvar e reabrir",
+    "Lembrete e data de exportação",
+    "Favicons locais",
+    "Menu de contexto para salvar páginas e links",
+    "Diagnóstico de coleções antigas"
+  ],
+  "pausedByUser": [
+    "Sincronização Google Drive"
+  ],
+  "targetViewports": [
+    "1440x900",
+    "390x844"
+  ],
+  "checks": {
+    "saveSelection": "Na interface com Chrome simulado, apenas abas 1 e 3 foram salvas no destino e fechadas; aba 2 permaneceu aberta.",
+    "saveFailure": "Falha simulada de storage impediu qualquer fechamento.",
+    "keepOpen": "Desativar fechamento salvou 3 abas e não removeu nenhuma.",
+    "edit": "Formulário adicionou URL; mover alterou origem e destino em uma gravação.",
+    "undo": "Exclusão e recuperação testadas na interface; na prévia real com localStorage, recuperação após recarregar preservou campos extras.",
+    "metadata": "Favorito e etiquetas persistiram; busca por pesquisa retornou uma coleção.",
+    "duplicates": "Quatro abas com um URL repetido salvaram três; restaurar coleção abriu um URL novo e ignorou dois existentes/repetidos.",
+    "backup": "Exportação suprimiu aviso; nova alteração trouxe aviso novamente; lembrar amanhã persistiu data futura.",
+    "contextMenu": "Worker compilado exercitado por teste com API Chrome simulada, incluindo registro em português e salvar sem fechar abas.",
+    "responsive": "Capturas claras em 1440x900 e escuras em 390x844; sem overflow horizontal."
+  },
+  "validation": [
+    "17 testes automatizados passaram",
+    "Checagem TypeScript dos módulos de lógica passou",
+    "Build de produção passou",
+    "git diff --check passou"
+  ],
+  "limitations": [
+    "Chrome de uso real não foi controlado: fluxos de abas testados com API simulada e operações de recuperação com armazenamento real da prévia.",
+    "Favicons nativos e menu do Chrome instalado ainda precisam de conferência pelo usuário.",
+    "Auditoria completa de leitor de tela e contraste não executada."
+  ],
+  "renderedEvidence": [
+    {
+      "viewport": "1440x900",
+      "artifact": "improvements-desktop.png",
+      "observation": "Favorito, etiquetas, ações de edição e seleção de abas."
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "improvements-mobile.png",
+      "observation": "Layout estreito em tema escuro com opções de salvamento e aviso de backup."
+    }
+  ]
+}

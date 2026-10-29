@@ -1,5 +1,13 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  "Selecionadas: {count}": "Selected: {count}",
+  "Duplicadas: {count}": "Duplicates: {count}",
+  "Abas abertas: {count}. Ignoradas: {skipped}.": "Tabs opened: {count}. Skipped: {skipped}.",
+  "Salvar {count} aba": "Save {count} tab",
+
+  "Marque as abas que deseja guardar e escolha o destino em “Salvar em”. Você pode criar uma sessão ou usar uma coleção existente, ignorar duplicatas e decidir se as abas serão fechadas após salvar.": "Select the tabs you want to save and choose a destination in “Save to”. Create a session or use an existing collection, skip duplicates, and decide whether to close the tabs after saving.",
+  "“Nova coleção” cria um espaço vazio. Expanda “Ver abas” para adicionar um endereço, remover abas ou movê-las. Use a estrela para favoritar e o lápis para editar nome e etiquetas.": "“New collection” creates an empty space. Expand “View tabs” to add an address, remove tabs, or move them. Use the star for favorites and the pencil to edit the name and tags.",
+
   "Dados originais copiados.": "Original data copied.",
   "Não foi possível copiar. Selecione o texto dos dados originais e copie manualmente.": "Could not copy. Select the original data text and copy it manually.",
   "Dados antigos: algumas abas não puderam ser lidas": "Legacy data: some tabs could not be read",
