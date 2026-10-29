@@ -123,3 +123,10 @@
 @media(max-width:1350px){.topbar-controls>.local-badge{display:none}.topbar-controls{gap:10px}}
 @media(max-width:1000px){.topbar{height:auto;min-height:78px;flex-wrap:wrap;gap:12px;padding-top:13px;padding-bottom:13px}.topbar-controls{flex-wrap:wrap}}
 @media(max-width:640px){.tutorial-links{width:100%;justify-content:space-between}.setup-trigger{border-left:0;padding-left:0}}
+.brand-logo{width:37px;height:37px;margin-right:10px;flex-shrink:0}
+.tutorial-logo{width:28px;height:28px;flex-shrink:0}
+@media(max-width:640px){.brand-logo{width:32px;height:32px;margin-right:7px}}
+.page-footer a{color:#607952;text-decoration:underline;text-underline-offset:3px}
+.page-footer a:hover{color:#2c543f}
+[data-theme="dark"] .page-footer a{color:#bdd2ab}
+[data-theme="dark"] .page-footer a:hover{color:#e1efd6}

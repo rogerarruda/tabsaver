@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
-import { CircleHelp, Settings2, X, ArrowRight, ArrowLeft, Layers, LayoutGrid, ArrowDownToLine, Folder, ShieldCheck, SunMoon, Check, ExternalLink } from 'lucide-vue-next'
+import { CircleHelp, Settings2, X, ArrowRight, ArrowLeft, LayoutGrid, ArrowDownToLine, Folder, ShieldCheck, SunMoon, Check, ExternalLink } from 'lucide-vue-next'
+import brandIcon from '../images/tabsaver-icon.svg'
 const props = defineProps<{ t: (text: string, params?: Record<string, string | number>) => string }>()
 const emit = defineEmits<{ modal: [open: boolean]; notice: [text: string] }>()
 const open = ref(false)
@@ -53,7 +54,7 @@ onMounted(async () => {
 <template>
   <div class="tutorial-links"><button class="tutorial-trigger setup-trigger" @click="show(true, $event)"><Settings2 :size="16" /><span>{{ t('Configurar nova aba') }}</span></button><button ref="trigger" class="tutorial-trigger" @click="show(false, $event)"><CircleHelp :size="16" /><span>{{ t('Como usar') }}</span></button></div>
   <Teleport to="body"><div v-if="open" class="modal-backdrop tutorial-backdrop" @keydown.esc="finish"><section class="modal tutorial-modal" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" @keydown.tab="trap">
-    <header class="tutorial-top"><span class="tutorial-brand"><Layers :size="19" />TabSaver</span><button class="icon-button" :disabled="saving" :aria-label="t('Fechar tutorial')" @click="finish"><X :size="20" /></button></header>
+    <header class="tutorial-top"><span class="tutorial-brand"><img class="tutorial-logo" :src="brandIcon" alt="" width="28" height="28" />TabSaver</span><button class="icon-button" :disabled="saving" :aria-label="t('Fechar tutorial')" @click="finish"><X :size="20" /></button></header>
     <div class="tutorial-progress" :aria-label="t('Passo {current} de {total}', { current: step + 1, total: steps.length })"><span v-for="(_, index) in steps" :key="index" :class="{ complete: index <= step }"></span></div>
     <p class="tutorial-step">{{ t('Passo {current} de {total}', { current: step + 1, total: steps.length }) }}</p>
     <div class="tutorial-illustration" aria-hidden="true"><div class="tutorial-window"><span></span><span></span><span></span><div class="tutorial-window-line"></div></div><div class="tutorial-visual"><span class="tutorial-symbol"><component :is="current.icon" :size="35" :stroke-width="1.5" /></span><div class="tutorial-lines"><span></span><span></span><span></span></div><span class="tutorial-check"><Check :size="19" /></span></div></div>

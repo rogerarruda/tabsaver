@@ -1,5 +1,6 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  "Desenvolvido por": "Developed by",
   "Configurar nova aba": "New tab setup",
   "Seu novo ponto de partida": "Your new starting point",
   "Abra seu espaço pela nova aba ou pelo ícone da extensão.": "Open your space from a new tab or the extension icon.",

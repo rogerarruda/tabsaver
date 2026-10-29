@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 64 64">
+  <title>TabSaver</title>
+  <desc>A leaf resting flat on the top sheet of three stacked layers.</desc>
+  <rect x="2" y="2" width="60" height="60" rx="17" fill="#2c543f"/>
+  <path d="m15 41 17 9 17-9M15 32l17 9 17-9" fill="none" stroke="#e8f0df" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m15 23 17-9 17 9-17 9Z" fill="#bad0aa" stroke="#bad0aa" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M23 25c1-8 9-9 19-6-3 8-11 11-19 6Z" fill="#2c543f"/>
+  <path d="m23 26 12-5" fill="none" stroke="#bad0aa" stroke-width="1.8" stroke-linecap="round"/>
+</svg>

@@ -4,6 +4,7 @@ import { Layers, LayoutGrid, Search, Plus, ArrowUpRight, X, Leaf, Folder, Chevro
 
 import BackupTools from './BackupTools.vue'
 import Tutorial from './Tutorial.vue'
+import brandIcon from '../images/tabsaver-icon.svg'
 import type { Snapshot } from './backup'
 import { usePreferences } from './preferences'
 
@@ -101,7 +102,7 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
 <template>
   <div class="app-shell">
     <aside class="sidebar" :inert="dialog || backupDialog || tutorialDialog || undefined">
-      <a class="brand" href="#" @click.prevent="selected = 'all'"><span class="brand-icon"><Layers :size="23" /></span>TabSaver<span class="brand-dot">.</span></a>
+      <a class="brand" href="#" @click.prevent="selected = 'all'"><img class="brand-logo" :src="brandIcon" alt="" width="37" height="37" />TabSaver<span class="brand-dot">.</span></a>
       <div class="workspace-label">{{ t('SEU ESPAÇO') }}</div>
       <button class="nav-item" :class="{ active: selected === 'all' }" @click="selected = 'all'"><LayoutGrid :size="18" /> {{ t('Todas as coleções') }} <span class="nav-count">{{ collections.length }}</span></button>
       <div class="sidebar-section"><span>{{ t('COLEÇÕES') }}</span><button class="icon-button" :aria-label="t('Criar coleção')" @click="startEdit()"><Plus :size="17" /></button></div>
@@ -139,7 +140,7 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
           </section>
           <aside class="open-panel"><div class="open-panel-heading"><span class="live-dot"></span><h2>{{ t('Abas abertas') }}</h2><span class="count-pill">{{ openTabs.length }}</span></div><p class="panel-description">{{ t('Sua janela atual, pronta para guardar.') }}</p><div class="open-tab-list"><div v-for="tab in openTabs" :key="tab.id" class="open-tab"><span class="site-letter">{{ domain(tab.url).charAt(0).toUpperCase() }}</span><button class="tab-name" @click="openTab(tab.url)"><strong>{{ tab.title }}</strong><small>{{ domain(tab.url) }}</small></button><button class="icon-button close-tab" :aria-label="t('Fechar aba {title}', { title: tab.title })" @click="closeTab(tab)"><X :size="15" /></button></div><div v-if="!openTabs.length" class="open-empty"><Check :size="24" /><strong>{{ t('Tudo tranquilo por aqui') }}</strong><p>{{ t('As abas desta janela aparecerão aqui.') }}</p></div></div><div class="save-area"><button class="button primary" :disabled="!openTabs.length || busy" @click="saveTabs"><ArrowDownToLine :size="18" />{{ busy ? t('Salvando…') : t('Salvar e liberar abas') }}</button><p>{{ t('As abas serão salvas e fechadas.') }}<br>{{ t('Esta página continua aberta.') }}</p></div><div class="tip"><Leaf :size="18" /><p><strong>{{ t('Respire. Suas abas estão guardadas.') }}</strong><br>{{ t('Reabra uma coleção quando precisar.') }}</p></div></aside>
         </div>
-        <footer class="page-footer"><span>{{ t('Feito para deixar seu dia mais leve.') }}</span><span>TabSaver <span class="footer-dot">●</span> {{ t('Seu espaço de volta.') }}</span></footer>
+        <footer class="page-footer"><span>{{ t('Desenvolvido por') }} <a href="https://rogerarruda.dev" target="_blank" rel="noopener noreferrer">rogerarruda.dev</a></span><span>TabSaver <span class="footer-dot">●</span> {{ t('Seu espaço de volta.') }}</span></footer>
       </div>
     </main>
     <div v-if="message" class="toast" role="status"><Check :size="18" />{{ message }}</div>
