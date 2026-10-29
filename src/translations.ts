@@ -1,5 +1,13 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  "Dados originais copiados.": "Original data copied.",
+  "Não foi possível copiar. Selecione o texto dos dados originais e copie manualmente.": "Could not copy. Select the original data text and copy it manually.",
+  "Dados antigos: algumas abas não puderam ser lidas": "Legacy data: some tabs could not be read",
+  "Apenas as abas reconhecidas são exibidas. O conteúdo original continua salvo; a edição de abas desta coleção está bloqueada para evitar perda de dados.": "Only recognized tabs are displayed. The original content is still saved; tab editing in this collection is blocked to prevent data loss.",
+  "Use Exportar backup para guardar uma cópia completa antes de corrigir o formato ou pedir ajuda.": "Use Export backup to keep a complete copy before fixing the format or asking for help.",
+  "Copiar dados originais": "Copy original data",
+  "Dados originais": "Original data",
+
   "Não foi possível adiar o lembrete.": "Could not snooze the reminder.",
   "O arquivo foi preparado, mas não foi possível registrar a data da exportação.": "The file was prepared, but the export date could not be recorded.",
   "Há alterações sem uma exportação recente. Salve um backup.": "You have changes since your last export. Save a backup.",
