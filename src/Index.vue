@@ -8,7 +8,7 @@ import brandIcon from '../images/tabsaver-icon.svg'
 import type { Snapshot } from './backup'
 import { usePreferences } from './preferences'
 
-import { readCollections, writeCollections, appendTabs } from './collections'
+import { readCollections, writeCollections, appendTabs, replaceTabs, moveSavedTab, manualTab } from './collections'
 import type { Tab, Collection } from './collections'
 const openTabs = ref<Tab[]>([])
 const saveDestination = ref('new')
@@ -44,14 +44,13 @@ async function refreshTabs() {
   if (!extension) return
   try { const tabs = await chrome.tabs.query({ currentWindow: true }); openTabs.value = tabs.filter(t => t.url && !t.url.startsWith('chrome-extension://') && !t.url.startsWith('chrome://newtab')).map(t => ({ id: t.id, title: t.title || t.url!, url: t.url! })) } catch { error.value = t('Não foi possível carregar as abas. Recarregue esta página.') }
 }
-async function persist(next: Collection[]) {
+async function persist(next: Collection[], keepExpanded = false) {
   if (storageUnavailable.value) throw new Error('Storage could not be read safely')
   const stored = writeCollections(next)
   if (extension) await chrome.storage.local.set({ collections: stored })
   else localStorage.setItem('tabsaver-preview', JSON.stringify(stored))
   collections.value = readCollections(stored)
-  selected.value = 'all'
-  expanded.value = []
+  if (!keepExpanded) { selected.value = 'all'; expanded.value = [] }
 }
 function trapFocus(event: KeyboardEvent) {
   const items = [...(event.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('button:not(:disabled), input, [href], select')]
@@ -89,6 +88,27 @@ async function closeTab(tab: Tab) { try { if (extension && tab.id !== undefined)
 async function remove(collection: Collection) {
   if (!window.confirm(t('Excluir a coleção “{name}” com {count} abas?', { name: collection.name, count: collection.tabs.length }))) return
   try { await persist(collections.value.filter(c => c.key !== collection.key)); if (selected.value === collection.key) selected.value = 'all'; notify(t('Coleção excluída.')) } catch { error.value = t('Não foi possível excluir a coleção.') }
+}
+async function deleteSavedTab(collection: Collection, index: number) {
+  if (busy.value) return
+  busy.value = true
+  try { await persist(collections.value.map(c => c.key === collection.key ? replaceTabs(c, c.tabs.filter((_, i) => i !== index)) : c), true); notify(t('Aba removida da coleção.')) }
+  catch { error.value = t('Não foi possível editar esta coleção. Os dados foram preservados.') } finally { busy.value = false }
+}
+async function moveTab(collection: Collection, index: number, event: Event) {
+  const input = event.target as HTMLSelectElement, destination = input.value
+  input.value = ''
+  if (!destination || busy.value) return
+  busy.value = true
+  try { await persist(moveSavedTab(collections.value, collection.key!, destination, index), true); notify(t('Aba movida.')) }
+  catch { error.value = t('Não foi possível editar esta coleção. Os dados foram preservados.') } finally { busy.value = false }
+}
+async function addTab(collection: Collection, event: Event) {
+  if (busy.value) return
+  const form = event.target as HTMLFormElement, data = new FormData(form)
+  busy.value = true
+  try { const tab = manualTab(String(data.get('title') || ''), String(data.get('url') || '')); await persist(collections.value.map(c => c.key === collection.key ? appendTabs(c, [tab]) : c), true); form.reset(); notify(t('Aba adicionada.')) }
+  catch { error.value = t('Não foi possível adicionar. Use um endereço http ou https válido.') } finally { busy.value = false }
 }
 function toggle(date: string) { expanded.value = expanded.value.includes(date) ? expanded.value.filter(d => d !== date) : [...expanded.value, date] }
 function loadCollections(value: unknown) {
@@ -141,8 +161,8 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
               <div class="card-top"><span class="folder-tile" :class="['mint','lavender','sand'][index % 3]"><Folder :size="22" /></span><div class="card-title"><h3>{{ collection.name }}</h3><p><Clock3 :size="12" />{{ dateLabel(collection.date) }}<span>·</span>{{ collection.tabs.length }} {{ collection.tabs.length === 1 ? t('aba') : t('abas') }}</p></div><button class="icon-button" :aria-label="t('Renomear coleção')" @click="startEdit(collection)"><Pencil :size="16" /></button><button class="icon-button delete-button" :aria-label="t('Excluir coleção')" @click="remove(collection)"><Trash2 :size="16" /></button></div>
               <div class="tab-preview" v-if="collection.tabs.length"><span v-for="tab in collection.tabs.slice(0, 3)" :key="tab.url" class="domain-chip"><span>{{ domain(tab.url).charAt(0).toUpperCase() }}</span>{{ domain(tab.url) }}</span><span v-if="collection.tabs.length > 3" class="extra-tabs">+{{ collection.tabs.length - 3 }}</span></div>
               <p v-else class="empty-collection">{{ t('Esta coleção ainda não tem abas.') }}</p>
-              <div v-if="expanded.includes(collection.key!)" class="saved-tab-list"><a v-for="(tab, tabIndex) in collection.tabs" :key="tabIndex" :href="tab.url" @click.prevent="openTab(tab.url)" class="saved-tab"><span class="site-letter">{{ domain(tab.url).charAt(0).toUpperCase() }}</span><span><strong>{{ tab.title }}</strong><small>{{ domain(tab.url) }}</small></span><ArrowUpRight :size="16" /></a></div>
-              <div class="card-footer"><button class="text-button" :disabled="!collection.tabs.length" :aria-expanded="expanded.includes(collection.key!)" @click="toggle(collection.key!)">{{ expanded.includes(collection.key!) ? t('Ocultar abas') : t('Ver abas') }}<ChevronDown :size="15" :class="{ rotated: expanded.includes(collection.key!) }" /></button><button class="restore-button" :disabled="!collection.tabs.length" @click="restore(collection)">{{ t('Abrir coleção') }}<ArrowUpRight :size="15" /></button></div>
+              <div v-if="expanded.includes(collection.key!)" class="saved-tab-list"><div v-for="(tab, tabIndex) in collection.tabs" :key="tabIndex" class="saved-tab"><a class="saved-tab-link" :href="tab.url" @click.prevent="openTab(tab.url)"><span class="site-letter">{{ domain(tab.url).charAt(0).toUpperCase() }}</span><span class="saved-tab-info"><strong>{{ tab.title }}</strong><small>{{ domain(tab.url) }}</small></span><ArrowUpRight :size="16" /></a><select class="move-select" :aria-label="t('Mover {title}', { title: tab.title })" :disabled="busy || collection.unreadableTabs" value="" @change="moveTab(collection, tabIndex, $event)"><option value="">{{ t('Mover para…') }}</option><option v-for="target in collections.filter(c => c.key !== collection.key && !c.unreadableTabs)" :key="target.key" :value="target.key">{{ target.name }}</option></select><button class="icon-button delete-button" :aria-label="t('Remover {title}', { title: tab.title })" :disabled="busy || collection.unreadableTabs" @click="deleteSavedTab(collection, tabIndex)"><X :size="15" /></button></div><form v-if="!collection.unreadableTabs" class="add-tab-form" @submit.prevent="addTab(collection, $event)"><input name="title" :placeholder="t('Título (opcional)')" :aria-label="t('Título (opcional)')" maxlength="500" /><input name="url" type="url" placeholder="https://…" :aria-label="t('Endereço da aba')" required /><button class="button" :disabled="busy"><Plus :size="15" />{{ t('Adicionar aba') }}</button></form></div>
+              <div class="card-footer"><button class="text-button" :aria-expanded="expanded.includes(collection.key!)" @click="toggle(collection.key!)">{{ expanded.includes(collection.key!) ? t('Ocultar abas') : t('Ver abas') }}<ChevronDown :size="15" :class="{ rotated: expanded.includes(collection.key!) }" /></button><button class="restore-button" :disabled="!collection.tabs.length" @click="restore(collection)">{{ t('Abrir coleção') }}<ArrowUpRight :size="15" /></button></div>
             </article>
             <p v-if="visible.length" class="collection-end">{{ t('Tudo no seu lugar. No seu tempo.') }}</p>
           </section>

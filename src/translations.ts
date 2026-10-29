@@ -1,5 +1,17 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  "Aba removida da coleção.": "Tab removed from collection.",
+  "Não foi possível editar esta coleção. Os dados foram preservados.": "Could not edit this collection. Your data has been preserved.",
+  "Aba movida.": "Tab moved.",
+  "Aba adicionada.": "Tab added.",
+  "Não foi possível adicionar. Use um endereço http ou https válido.": "Could not add tab. Use a valid http or https address.",
+  "Mover {title}": "Move {title}",
+  "Mover para…": "Move to…",
+  "Remover {title}": "Remove {title}",
+  "Título (opcional)": "Title (optional)",
+  "Endereço da aba": "Tab address",
+  "Adicionar aba": "Add tab",
+
   "{count} selecionadas": "{count} selected",
   "Desmarcar todas": "Deselect all",
   "Selecionar todas": "Select all",

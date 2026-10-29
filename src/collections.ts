@@ -53,3 +53,20 @@ export function appendTabs(collection: Collection, tabs: Tab[]): Collection {
   if (collection.unreadableTabs) throw new Error('Unreadable legacy tabs')
   return { ...collection, tabs: [...collection.tabs, ...tabs.map(({ title, url }) => ({ title, url }))], tabsChanged: true }
 }
+
+export function replaceTabs(collection: Collection, tabs: Tab[]): Collection {
+  if (collection.unreadableTabs) throw new Error('Unreadable legacy tabs')
+  return { ...collection, tabs, tabsChanged: true }
+}
+export function moveSavedTab(collections: Collection[], fromKey: string, toKey: string, index: number): Collection[] {
+  const source = collections.find(c => c.key === fromKey), target = collections.find(c => c.key === toKey)
+  if (!source || !target || fromKey === toKey || !source.tabs[index]) throw new Error('Invalid move')
+  const from = replaceTabs(source, source.tabs.filter((_, i) => i !== index))
+  const to = appendTabs(target, [source.tabs[index]])
+  return collections.map(c => c.key === fromKey ? from : c.key === toKey ? to : c)
+}
+export function manualTab(title: string, address: string): Tab {
+  const url = new URL(address.trim())
+  if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Invalid URL')
+  return { title: title.trim() || url.hostname, url: url.href }
+}

@@ -45,3 +45,14 @@ test('appending tabs preserves original metadata and existing tabs', () => {
   assert.deepEqual(original.tabs, { old: tab })
   assert.throws(() => api.appendTabs(readCollections([{ tabs: 42 }])[0], [tab]))
 })
+
+test('moving tabs is atomic and retains legacy metadata on both collections', () => {
+  const data = [{ name: 'A', tabs: [tab], custom: 1 }, { name: 'B', tabs: [], custom: 2 }]
+  const parsed = readCollections(data)
+  const result = writeCollections(api.moveSavedTab(parsed, 'stored-0', 'stored-1', 0))
+  assert.deepEqual(result, [{ ...data[0], tabs: [] }, { ...data[1], tabs: [tab] }])
+  assert.throws(() => api.moveSavedTab(parsed, 'stored-0', 'missing', 0))
+  assert.deepEqual(data[0].tabs, [tab])
+  assert.throws(() => api.manualTab('Unsafe', 'javascript:alert(1)'))
+  assert.equal(api.manualTab('', 'https://example.com').title, 'example.com')
+})
