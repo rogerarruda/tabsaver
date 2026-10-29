@@ -130,3 +130,4 @@
 .page-footer a:hover{color:#2c543f}
 [data-theme="dark"] .page-footer a{color:#bdd2ab}
 [data-theme="dark"] .page-footer a:hover{color:#e1efd6}
+.field-label{display:block;font-size:11px;color:var(--ink);margin:0 0 8px}.field-select{width:100%;padding:9px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);font-size:11px;margin-bottom:12px}

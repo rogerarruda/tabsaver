@@ -8,9 +8,10 @@ import brandIcon from '../images/tabsaver-icon.svg'
 import type { Snapshot } from './backup'
 import { usePreferences } from './preferences'
 
-import { readCollections, writeCollections } from './collections'
+import { readCollections, writeCollections, appendTabs } from './collections'
 import type { Tab, Collection } from './collections'
 const openTabs = ref<Tab[]>([])
+const saveDestination = ref('new')
 const collections = ref<Collection[]>([])
 const query = ref('')
 const sort = ref('newest')
@@ -70,9 +71,12 @@ async function saveTabs() {
   try {
     const snapshot = [...openTabs.value]
     const date = new Date()
-    await persist([...collections.value, { name: t('Sessão de {date} · {time}', { date: date.toLocaleDateString(locale.value, { day: 'numeric', month: 'short' }), time: date.toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' }) }), tabs: snapshot.map(({ title, url }) => ({ title, url })), date: date.toISOString() }])
+    const destination = collections.value.find(c => c.key === saveDestination.value)
+    if (saveDestination.value !== 'new' && !destination) throw new Error('Missing collection')
+    await persist(destination ? collections.value.map(c => c.key === destination.key ? appendTabs(c, snapshot) : c) : [...collections.value, { name: t('Sessão de {date} · {time}', { date: date.toLocaleDateString(locale.value, { day: 'numeric', month: 'short' }), time: date.toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' }) }), tabs: snapshot.map(({ title, url }) => ({ title, url })), date: date.toISOString() }])
+    saveDestination.value = 'new'
     if (extension) { const current = await chrome.tabs.getCurrent(); const ids = snapshot.filter(t => t.id !== current?.id && t.id !== undefined).map(t => t.id!); if (ids.length) await chrome.tabs.remove(ids); await refreshTabs() }
-    selected.value = 'all'; notify(t('Abas salvas em uma nova coleção. Tudo organizado!'))
+    selected.value = 'all'; notify(t('Abas salvas. Tudo organizado!'))
   } catch { error.value = t('Não foi possível concluir. Confira a coleção salva antes de tentar novamente.') } finally { busy.value = false }
 }
 async function openTab(url: string) { try { if (extension) await chrome.tabs.create({ url }); else window.open(url, '_blank', 'noopener,noreferrer') } catch { error.value = t('Não foi possível abrir esta aba.') } }
@@ -138,7 +142,7 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
             </article>
             <p v-if="visible.length" class="collection-end">{{ t('Tudo no seu lugar. No seu tempo.') }}</p>
           </section>
-          <aside class="open-panel"><div class="open-panel-heading"><span class="live-dot"></span><h2>{{ t('Abas abertas') }}</h2><span class="count-pill">{{ openTabs.length }}</span></div><p class="panel-description">{{ t('Sua janela atual, pronta para guardar.') }}</p><div class="open-tab-list"><div v-for="tab in openTabs" :key="tab.id" class="open-tab"><span class="site-letter">{{ domain(tab.url).charAt(0).toUpperCase() }}</span><button class="tab-name" @click="openTab(tab.url)"><strong>{{ tab.title }}</strong><small>{{ domain(tab.url) }}</small></button><button class="icon-button close-tab" :aria-label="t('Fechar aba {title}', { title: tab.title })" @click="closeTab(tab)"><X :size="15" /></button></div><div v-if="!openTabs.length" class="open-empty"><Check :size="24" /><strong>{{ t('Tudo tranquilo por aqui') }}</strong><p>{{ t('As abas desta janela aparecerão aqui.') }}</p></div></div><div class="save-area"><button class="button primary" :disabled="!openTabs.length || busy" @click="saveTabs"><ArrowDownToLine :size="18" />{{ busy ? t('Salvando…') : t('Salvar e liberar abas') }}</button><p>{{ t('As abas serão salvas e fechadas.') }}<br>{{ t('Esta página continua aberta.') }}</p></div><div class="tip"><Leaf :size="18" /><p><strong>{{ t('Respire. Suas abas estão guardadas.') }}</strong><br>{{ t('Reabra uma coleção quando precisar.') }}</p></div></aside>
+          <aside class="open-panel"><div class="open-panel-heading"><span class="live-dot"></span><h2>{{ t('Abas abertas') }}</h2><span class="count-pill">{{ openTabs.length }}</span></div><p class="panel-description">{{ t('Sua janela atual, pronta para guardar.') }}</p><div class="open-tab-list"><div v-for="tab in openTabs" :key="tab.id" class="open-tab"><span class="site-letter">{{ domain(tab.url).charAt(0).toUpperCase() }}</span><button class="tab-name" @click="openTab(tab.url)"><strong>{{ tab.title }}</strong><small>{{ domain(tab.url) }}</small></button><button class="icon-button close-tab" :aria-label="t('Fechar aba {title}', { title: tab.title })" @click="closeTab(tab)"><X :size="15" /></button></div><div v-if="!openTabs.length" class="open-empty"><Check :size="24" /><strong>{{ t('Tudo tranquilo por aqui') }}</strong><p>{{ t('As abas desta janela aparecerão aqui.') }}</p></div></div><div class="save-area"><label class="field-label" for="save-destination">{{ t('Salvar em') }}</label><select id="save-destination" v-model="saveDestination" class="field-select" :disabled="busy"><option value="new">{{ t('Nova coleção') }}</option><option v-for="c in collections" :key="c.key" :value="c.key" :disabled="c.unreadableTabs">{{ c.name }}</option></select><button class="button primary" :disabled="!openTabs.length || busy" @click="saveTabs"><ArrowDownToLine :size="18" />{{ busy ? t('Salvando…') : t('Salvar e liberar abas') }}</button><p>{{ t('As abas serão salvas e fechadas.') }}<br>{{ t('Esta página continua aberta.') }}</p></div><div class="tip"><Leaf :size="18" /><p><strong>{{ t('Respire. Suas abas estão guardadas.') }}</strong><br>{{ t('Reabra uma coleção quando precisar.') }}</p></div></aside>
         </div>
         <footer class="page-footer"><span>{{ t('Desenvolvido por') }} <a href="https://rogerarruda.dev" target="_blank" rel="noopener noreferrer">rogerarruda.dev</a></span><span>TabSaver <span class="footer-dot">●</span> {{ t('Seu espaço de volta.') }}</span></footer>
       </div>

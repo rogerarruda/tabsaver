@@ -36,3 +36,12 @@ test('rename changes only the selected name and preserves original legacy tabs',
 test('rejects malformed containers instead of treating them as an empty writable store', () => {
   for (const value of [null, {}, 'corrupt', 42]) assert.throws(() => readCollections(value))
 })
+
+test('appending tabs preserves original metadata and existing tabs', () => {
+  const original = { name: 'Project', tabs: { old: tab }, date: '2025-01-01', extra: 'keep' }
+  const collection = readCollections([original])[0]
+  const updated = api.appendTabs(collection, [{ id: 42, title: 'New', url: 'https://new.example' }])
+  assert.deepEqual(writeCollections([updated]), [{ ...original, tabs: [tab, { title: 'New', url: 'https://new.example' }] }])
+  assert.deepEqual(original.tabs, { old: tab })
+  assert.throws(() => api.appendTabs(readCollections([{ tabs: 42 }])[0], [tab]))
+})

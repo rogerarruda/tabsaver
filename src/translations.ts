@@ -1,5 +1,8 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  "Salvar em": "Save to",
+  "Abas salvas. Tudo organizado!": "Tabs saved. All organized!",
+
   "Desenvolvido por": "Developed by",
   "Configurar nova aba": "New tab setup",
   "Seu novo ponto de partida": "Your new starting point",

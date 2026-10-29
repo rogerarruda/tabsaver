@@ -1,5 +1,5 @@
 export type Tab = { id?: number; title: string; url: string }
-export type Collection = { name: string; tabs: Tab[]; date: string; key?: string; source?: unknown; renamed?: boolean; unreadableTabs?: boolean }
+export type Collection = { name: string; tabs: Tab[]; date: string; key?: string; source?: unknown; renamed?: boolean; unreadableTabs?: boolean; tabsChanged?: boolean }
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value)
 
 function readTabs(input: unknown): { tabs: Tab[]; unreadable: boolean } {
@@ -42,8 +42,14 @@ export function readCollections(input: unknown): Collection[] {
 export function writeCollections(collections: Collection[]): unknown[] {
   return collections.map(collection => {
     if (Object.prototype.hasOwnProperty.call(collection, 'source')) {
-      return collection.renamed && record(collection.source) ? { ...collection.source, name: collection.name } : collection.source
+      if (record(collection.source)) return { ...collection.source, ...(collection.renamed ? { name: collection.name } : {}), ...(collection.tabsChanged ? { tabs: collection.tabs } : {}) }
+      return collection.source
     }
     return { name: collection.name, tabs: collection.tabs, date: collection.date }
   })
+}
+
+export function appendTabs(collection: Collection, tabs: Tab[]): Collection {
+  if (collection.unreadableTabs) throw new Error('Unreadable legacy tabs')
+  return { ...collection, tabs: [...collection.tabs, ...tabs.map(({ title, url }) => ({ title, url }))], tabsChanged: true }
 }
