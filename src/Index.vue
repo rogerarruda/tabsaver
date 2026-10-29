@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
-import { Layers, LayoutGrid, Search, Plus, ArrowUpRight, X, Leaf, Folder, ChevronDown, ArrowDownToLine, Pencil, Trash2, Check, HardDrive, Clock3, Languages, SunMoon } from 'lucide-vue-next'
+import { Layers, LayoutGrid, Search, Plus, ArrowUpRight, X, Leaf, Folder, ChevronDown, ArrowDownToLine, Pencil, Trash2, Check, HardDrive, Clock3, Languages, SunMoon, Star } from 'lucide-vue-next'
 
 import BackupTools from './BackupTools.vue'
 import Tutorial from './Tutorial.vue'
@@ -9,7 +9,7 @@ import type { Snapshot } from './backup'
 import { usePreferences } from './preferences'
 
 import { writeCollectionData } from './collection-storage'
-import { readCollections, writeCollections, appendTabs, replaceTabs, moveSavedTab, manualTab } from './collections'
+import { readCollections, writeCollections, appendTabs, replaceTabs, moveSavedTab, manualTab, parseTags } from './collections'
 import type { Tab, Collection } from './collections'
 const openTabs = ref<Tab[]>([])
 const saveDestination = ref('new')
@@ -27,6 +27,7 @@ const backupDialog = ref(false)
 const tutorialDialog = ref(false)
 const editing = ref<Collection | null>(null)
 const name = ref('')
+const tags = ref('')
 const busy = ref(false)
 const loading = ref(true)
 const message = ref('')
@@ -37,8 +38,8 @@ const { language, theme, locale, t, loadPreferences, applyPreferences, flushPref
 let noticeTimer: ReturnType<typeof setTimeout>
 const extension = typeof chrome !== 'undefined' && !!chrome.storage?.local && !!chrome.tabs
 const totalTabs = computed(() => collections.value.reduce((sum, c) => sum + c.tabs.length, 0))
-const visible = computed(() => collections.value.filter(c => (selected.value === 'all' || c.key === selected.value) && `${c.name} ${c.tabs.map(t => `${t.title} ${t.url}`).join(' ')}`.toLocaleLowerCase().includes(query.value.toLocaleLowerCase())).sort((a, b) => sort.value === 'name' ? a.name.localeCompare(b.name, locale.value) : (sort.value === 'oldest' ? 1 : -1) * (new Date(a.date).getTime() - new Date(b.date).getTime())))
-const heading = computed(() => selected.value === 'all' ? t('Suas coleções') : collections.value.find(c => c.key === selected.value)?.name || t('Suas coleções'))
+const visible = computed(() => collections.value.filter(c => (selected.value === 'all' || (selected.value === 'favorites' ? c.favorite : c.key === selected.value)) && `${c.name} ${(c.tags || []).join(' ')} ${c.tabs.map(t => `${t.title} ${t.url}`).join(' ')}`.toLocaleLowerCase().includes(query.value.toLocaleLowerCase())).sort((a, b) => Number(b.favorite) - Number(a.favorite) || (sort.value === 'name' ? a.name.localeCompare(b.name, locale.value) : (sort.value === 'oldest' ? 1 : -1) * (new Date(a.date).getTime() - new Date(b.date).getTime()))))
+const heading = computed(() => selected.value === 'favorites' ? t('Favoritos') : selected.value === 'all' ? t('Suas coleções') : collections.value.find(c => c.key === selected.value)?.name || t('Suas coleções'))
 function notify(text: string) { message.value = text; clearTimeout(noticeTimer); noticeTimer = setTimeout(() => message.value = '', 4500) }
 function domain(url: string) { try { return new URL(url).hostname.replace(/^www\./, '') || t('Página do navegador') } catch { return t('Página do navegador') } }
 function dateLabel(date: string) { if (!Number.isFinite(new Date(date).getTime())) return '—'; return new Date(date).toLocaleDateString(locale.value, { day: 'numeric', month: 'short', year: 'numeric' }) }
@@ -59,13 +60,13 @@ function trapFocus(event: KeyboardEvent) {
   if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
   else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
 }
-function startEdit(collection: Collection | null = null) { editing.value = collection; name.value = collection?.name || ''; dialog.value = true }
+function startEdit(collection: Collection | null = null) { editing.value = collection; name.value = collection?.name || ''; tags.value = (collection?.tags || []).join(', '); dialog.value = true }
 async function submitCollection() {
   if (!name.value.trim() || busy.value) return
   busy.value = true
   try {
     if (editing.value && (editing.value.source === null || typeof editing.value.source !== 'object')) throw new Error('Invalid legacy collection')
-    const next = editing.value ? collections.value.map(c => c.key === editing.value!.key ? { ...c, name: name.value.trim(), renamed: true } : c) : [...collections.value, { name: name.value.trim(), tabs: [], date: new Date().toISOString() }]
+    const next = editing.value ? collections.value.map(c => c.key === editing.value!.key ? { ...c, name: name.value.trim(), renamed: true, tags: parseTags(tags.value), metadataChanged: true } : c) : [...collections.value, { name: name.value.trim(), tabs: [], tags: parseTags(tags.value), date: new Date().toISOString() }]
     await persist(next); dialog.value = false; notify(editing.value ? t('Coleção renomeada.') : t('Coleção criada.'))
   } catch { error.value = t('Não foi possível salvar a coleção. Tente novamente.') } finally { busy.value = false }
 }
@@ -86,6 +87,12 @@ async function saveTabs() {
 async function openTab(url: string) { try { if (extension) await chrome.tabs.create({ url }); else window.open(url, '_blank', 'noopener,noreferrer') } catch { error.value = t('Não foi possível abrir esta aba.') } }
 async function restore(collection: Collection) { for (const tab of collection.tabs) await openTab(tab.url); notify(t('{count} abas abertas.', { count: collection.tabs.length })) }
 async function closeTab(tab: Tab) { try { if (extension && tab.id !== undefined) { await chrome.tabs.remove(tab.id); await refreshTabs() } } catch { error.value = t('Não foi possível fechar esta aba.') } }
+async function favorite(collection: Collection) {
+  if (busy.value || !collection.source || typeof collection.source !== 'object') return
+  busy.value = true
+  try { await persist(collections.value.map(c => c.key === collection.key ? { ...c, favorite: !c.favorite, metadataChanged: true } : c), true) }
+  catch { error.value = t('Não foi possível salvar a coleção. Tente novamente.') } finally { busy.value = false }
+}
 async function remove(collection: Collection) {
   if (busy.value) return
   busy.value = true
@@ -148,7 +155,7 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
       <a class="brand" href="#" @click.prevent="selected = 'all'"><img class="brand-logo" :src="brandIcon" alt="" width="37" height="37" />TabSaver<span class="brand-dot">.</span></a>
       <div class="workspace-label">{{ t('SEU ESPAÇO') }}</div>
       <button class="nav-item" :class="{ active: selected === 'all' }" @click="selected = 'all'"><LayoutGrid :size="18" /> {{ t('Todas as coleções') }} <span class="nav-count">{{ collections.length }}</span></button>
-      <div class="sidebar-section"><span>{{ t('COLEÇÕES') }}</span><button class="icon-button" :aria-label="t('Criar coleção')" @click="startEdit()"><Plus :size="17" /></button></div>
+      <button class="nav-item" :class="{ active: selected === 'favorites' }" @click="selected = 'favorites'"><Star :size="18" />{{ t('Favoritos') }}<span class="nav-count">{{ collections.filter(c => c.favorite).length }}</span></button><div class="sidebar-section"><span>{{ t('COLEÇÕES') }}</span><button class="icon-button" :aria-label="t('Criar coleção')" @click="startEdit()"><Plus :size="17" /></button></div>
       <nav class="collection-nav" :aria-label="t('Coleções')">
         <button v-for="collection in [...collections].sort((a,b) => b.date.localeCompare(a.date))" :key="collection.key" class="nav-item" :class="{ active: selected === collection.key }" @click="selected = collection.key!"><Folder :size="17" /><span class="nav-name">{{ collection.name }}</span><span class="nav-count">{{ collection.tabs.length }}</span></button>
         <p v-if="!collections.length" class="sidebar-empty">{{ t('Um lugar para cada ideia.') }}<br>{{ t('Crie sua primeira coleção.') }}</p>
@@ -169,12 +176,12 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
         <div class="content-layout">
           <section class="collections-section">
             <div v-if="lastDeleted" class="undo-banner" role="status"><span>{{ t('Uma coleção foi excluída.') }}</span><button class="text-button" :disabled="busy" @click="undoDelete">{{ t('Desfazer exclusão') }}</button></div><div class="section-heading"><h2>{{ heading }} <span>{{ visible.length }}</span></h2><label class="sort-label"><span class="sr-only">{{ t('Ordenar coleções') }}</span><select v-model="sort"><option value="newest">{{ t('Mais recentes') }}</option><option value="oldest">{{ t('Mais antigas') }}</option><option value="name">{{ t('Nome A–Z') }}</option></select><ChevronDown :size="14" /></label></div>
-            <label class="search-field"><Search :size="18" /><input v-model="query" :placeholder="t('Buscar coleções ou abas…')" :aria-label="t('Buscar coleções ou abas')" /><button v-if="query" class="icon-button" :aria-label="t('Limpar busca')" @click="query = ''"><X :size="16" /></button></label>
+            <div class="filter-bar"><button class="text-button" @click="selected = selected === 'favorites' ? 'all' : 'favorites'"><Star :size="14" />{{ selected === 'favorites' ? t('Todas as coleções') : t('Favoritos') }}</button></div><label class="search-field"><Search :size="18" /><input v-model="query" :placeholder="t('Buscar coleções ou abas…')" :aria-label="t('Buscar coleções ou abas')" /><button v-if="query" class="icon-button" :aria-label="t('Limpar busca')" @click="query = ''"><X :size="16" /></button></label>
             <div v-if="loading" class="empty-state" role="status">{{ t('Carregando suas coleções…') }}</div>
             <div v-else-if="!visible.length" class="empty-state"><span class="empty-icon"><component :is="query ? Search : Layers" :size="30" /></span><h3>{{ query ? t('Nenhum resultado por aqui') : t('Suas próximas ideias moram aqui') }}</h3><p>{{ query ? t('Tente outro nome, site ou palavra-chave.') : t('Salve as abas abertas ou crie uma coleção para começar a organizar seu espaço.') }}</p><button class="button" @click="query ? query = '' : startEdit()"><Plus v-if="!query" :size="17" />{{ query ? t('Limpar busca') : t('Criar primeira coleção') }}</button></div>
             <article v-for="(collection, index) in visible" :key="collection.key" class="collection-card">
-              <div class="card-top"><span class="folder-tile" :class="['mint','lavender','sand'][index % 3]"><Folder :size="22" /></span><div class="card-title"><h3>{{ collection.name }}</h3><p><Clock3 :size="12" />{{ dateLabel(collection.date) }}<span>·</span>{{ collection.tabs.length }} {{ collection.tabs.length === 1 ? t('aba') : t('abas') }}</p></div><button class="icon-button" :aria-label="t('Renomear coleção')" @click="startEdit(collection)"><Pencil :size="16" /></button><button class="icon-button delete-button" :aria-label="t('Excluir coleção')" @click="remove(collection)"><Trash2 :size="16" /></button></div>
-              <div class="tab-preview" v-if="collection.tabs.length"><span v-for="tab in collection.tabs.slice(0, 3)" :key="tab.url" class="domain-chip"><span>{{ domain(tab.url).charAt(0).toUpperCase() }}</span>{{ domain(tab.url) }}</span><span v-if="collection.tabs.length > 3" class="extra-tabs">+{{ collection.tabs.length - 3 }}</span></div>
+              <div class="card-top"><span class="folder-tile" :class="['mint','lavender','sand'][index % 3]"><Folder :size="22" /></span><div class="card-title"><h3>{{ collection.name }}</h3><p><Clock3 :size="12" />{{ dateLabel(collection.date) }}<span>·</span>{{ collection.tabs.length }} {{ collection.tabs.length === 1 ? t('aba') : t('abas') }}</p></div><button class="icon-button favorite-button" :class="{ starred: collection.favorite }" :aria-label="collection.favorite ? t('Remover dos favoritos') : t('Adicionar aos favoritos')" :aria-pressed="!!collection.favorite" :disabled="busy" @click="favorite(collection)"><Star :size="16" :fill="collection.favorite ? 'currentColor' : 'none'" /></button><button class="icon-button" :aria-label="t('Renomear coleção')" @click="startEdit(collection)"><Pencil :size="16" /></button><button class="icon-button delete-button" :aria-label="t('Excluir coleção')" @click="remove(collection)"><Trash2 :size="16" /></button></div>
+              <div v-if="collection.tags?.length" class="tag-list"><button v-for="tag in collection.tags" :key="tag" class="tag-chip" @click="query = tag">#{{ tag }}</button></div><div class="tab-preview" v-if="collection.tabs.length"><span v-for="tab in collection.tabs.slice(0, 3)" :key="tab.url" class="domain-chip"><span>{{ domain(tab.url).charAt(0).toUpperCase() }}</span>{{ domain(tab.url) }}</span><span v-if="collection.tabs.length > 3" class="extra-tabs">+{{ collection.tabs.length - 3 }}</span></div>
               <p v-else class="empty-collection">{{ t('Esta coleção ainda não tem abas.') }}</p>
               <div v-if="expanded.includes(collection.key!)" class="saved-tab-list"><div v-for="(tab, tabIndex) in collection.tabs" :key="tabIndex" class="saved-tab"><a class="saved-tab-link" :href="tab.url" @click.prevent="openTab(tab.url)"><span class="site-letter">{{ domain(tab.url).charAt(0).toUpperCase() }}</span><span class="saved-tab-info"><strong>{{ tab.title }}</strong><small>{{ domain(tab.url) }}</small></span><ArrowUpRight :size="16" /></a><select class="move-select" :aria-label="t('Mover {title}', { title: tab.title })" :disabled="busy || collection.unreadableTabs" value="" @change="moveTab(collection, tabIndex, $event)"><option value="">{{ t('Mover para…') }}</option><option v-for="target in collections.filter(c => c.key !== collection.key && !c.unreadableTabs)" :key="target.key" :value="target.key">{{ target.name }}</option></select><button class="icon-button delete-button" :aria-label="t('Remover {title}', { title: tab.title })" :disabled="busy || collection.unreadableTabs" @click="deleteSavedTab(collection, tabIndex)"><X :size="15" /></button></div><form v-if="!collection.unreadableTabs" class="add-tab-form" @submit.prevent="addTab(collection, $event)"><input name="title" :placeholder="t('Título (opcional)')" :aria-label="t('Título (opcional)')" maxlength="500" /><input name="url" type="url" placeholder="https://…" :aria-label="t('Endereço da aba')" required /><button class="button" :disabled="busy"><Plus :size="15" />{{ t('Adicionar aba') }}</button></form></div>
               <div class="card-footer"><button class="text-button" :aria-expanded="expanded.includes(collection.key!)" @click="toggle(collection.key!)">{{ expanded.includes(collection.key!) ? t('Ocultar abas') : t('Ver abas') }}<ChevronDown :size="15" :class="{ rotated: expanded.includes(collection.key!) }" /></button><button class="restore-button" :disabled="!collection.tabs.length" @click="restore(collection)">{{ t('Abrir coleção') }}<ArrowUpRight :size="15" /></button></div>
@@ -187,7 +194,7 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
       </div>
     </main>
     <div v-if="message" class="toast" role="status"><Check :size="18" />{{ message }}</div>
-    <div v-if="dialog" class="modal-backdrop" @click.self="dialog = false" @keydown.esc="dialog = false"><form class="modal" role="dialog" aria-modal="true" aria-labelledby="dialog-title" @submit.prevent="submitCollection" @keydown.tab="trapFocus"><div class="modal-heading"><span class="folder-tile mint"><Folder :size="23" /></span><button type="button" class="icon-button" :aria-label="t('Fechar')" @click="dialog = false"><X :size="20" /></button></div><h2 id="dialog-title">{{ editing ? t('Renomear coleção') : t('Um novo espaço para suas abas') }}</h2><p>{{ t('Escolha um nome que ajude você a encontrar suas ideias.') }}</p><label for="collection-name">{{ t('Nome da coleção') }}</label><input id="collection-name" v-model="name" v-focus maxlength="100" :placeholder="t('Ex.: Leituras para depois')" required /><div class="modal-actions"><button type="button" class="button" @click="dialog = false">{{ t('Cancelar') }}</button><button class="button primary" :disabled="!name.trim() || busy">{{ editing ? t('Salvar nome') : t('Criar coleção') }}</button></div></form></div>
+    <div v-if="dialog" class="modal-backdrop" @click.self="dialog = false" @keydown.esc="dialog = false"><form class="modal" role="dialog" aria-modal="true" aria-labelledby="dialog-title" @submit.prevent="submitCollection" @keydown.tab="trapFocus"><div class="modal-heading"><span class="folder-tile mint"><Folder :size="23" /></span><button type="button" class="icon-button" :aria-label="t('Fechar')" @click="dialog = false"><X :size="20" /></button></div><h2 id="dialog-title">{{ editing ? t('Renomear coleção') : t('Um novo espaço para suas abas') }}</h2><p>{{ t('Escolha um nome que ajude você a encontrar suas ideias.') }}</p><label for="collection-name">{{ t('Nome da coleção') }}</label><input id="collection-name" v-model="name" v-focus maxlength="100" :placeholder="t('Ex.: Leituras para depois')" required /><label for="collection-tags" class="tags-label">{{ t('Etiquetas (separadas por vírgula)') }}</label><input id="collection-tags" v-model="tags" maxlength="600" :placeholder="t('Ex.: trabalho, pesquisa')" /><div class="modal-actions"><button type="button" class="button" @click="dialog = false">{{ t('Cancelar') }}</button><button class="button primary" :disabled="!name.trim() || busy">{{ editing ? t('Salvar nome') : t('Criar coleção') }}</button></div></form></div>
   </div>
 </template>
 

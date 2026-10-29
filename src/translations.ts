@@ -1,5 +1,11 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  "Favoritos": "Favorites",
+  "Remover dos favoritos": "Remove from favorites",
+  "Adicionar aos favoritos": "Add to favorites",
+  "Etiquetas (separadas por vírgula)": "Tags (comma separated)",
+  "Ex.: trabalho, pesquisa": "E.g. work, research",
+
   "Coleção excluída. Você pode desfazer.": "Collection deleted. You can undo this.",
   "Coleção recuperada.": "Collection recovered.",
   "Não foi possível recuperar a coleção.": "Could not recover the collection.",

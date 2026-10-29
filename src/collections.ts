@@ -1,5 +1,5 @@
 export type Tab = { id?: number; title: string; url: string }
-export type Collection = { name: string; tabs: Tab[]; date: string; key?: string; source?: unknown; renamed?: boolean; unreadableTabs?: boolean; tabsChanged?: boolean }
+export type Collection = { name: string; tabs: Tab[]; date: string; key?: string; source?: unknown; renamed?: boolean; unreadableTabs?: boolean; tabsChanged?: boolean; favorite?: boolean; tags?: string[]; metadataChanged?: boolean }
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value)
 
 function readTabs(input: unknown): { tabs: Tab[]; unreadable: boolean } {
@@ -32,6 +32,8 @@ export function readCollections(input: unknown): Collection[] {
       name: typeof data.name === 'string' ? data.name : `Collection ${index + 1}`,
       date: typeof data.date === 'string' ? data.date : typeof data.date === 'number' && Number.isFinite(new Date(data.date).getTime()) ? new Date(data.date).toISOString() : '',
       tabs: result.tabs,
+      favorite: data.favorite === true,
+      tags: Array.isArray(data.tags) ? data.tags.filter((tag): tag is string => typeof tag === 'string') : [],
       key: `stored-${index}`,
       source,
       unreadableTabs: !record(source) || result.unreadable,
@@ -42,10 +44,10 @@ export function readCollections(input: unknown): Collection[] {
 export function writeCollections(collections: Collection[]): unknown[] {
   return collections.map(collection => {
     if (Object.prototype.hasOwnProperty.call(collection, 'source')) {
-      if (record(collection.source)) return { ...collection.source, ...(collection.renamed ? { name: collection.name } : {}), ...(collection.tabsChanged ? { tabs: collection.tabs } : {}) }
+      if (record(collection.source)) return { ...collection.source, ...(collection.renamed ? { name: collection.name } : {}), ...(collection.tabsChanged ? { tabs: collection.tabs } : {}), ...(collection.metadataChanged ? { favorite: !!collection.favorite, tags: collection.tags || [] } : {}) }
       return collection.source
     }
-    return { name: collection.name, tabs: collection.tabs, date: collection.date }
+    return { name: collection.name, tabs: collection.tabs, date: collection.date, ...(collection.tags?.length ? { tags: collection.tags } : {}), ...(collection.favorite ? { favorite: true } : {}) }
   })
 }
 
@@ -69,4 +71,9 @@ export function manualTab(title: string, address: string): Tab {
   const url = new URL(address.trim())
   if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Invalid URL')
   return { title: title.trim() || url.hostname, url: url.href }
+}
+
+export function parseTags(text: string): string[] {
+  const seen = new Set<string>()
+  return text.split(',').map(tag => tag.trim().slice(0, 40)).filter(tag => { const key = tag.toLocaleLowerCase(); if (!tag || seen.has(key)) return false; seen.add(key); return true }).slice(0, 20)
 }

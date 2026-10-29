@@ -56,3 +56,10 @@ test('moving tabs is atomic and retains legacy metadata on both collections', ()
   assert.throws(() => api.manualTab('Unsafe', 'javascript:alert(1)'))
   assert.equal(api.manualTab('', 'https://example.com').title, 'example.com')
 })
+
+test('favorite and tags updates preserve unreadable legacy tabs and metadata', () => {
+  const data = { name: 'Old', tabs: 42, custom: true }
+  const parsed = readCollections([data])[0]
+  const result = writeCollections([{ ...parsed, favorite: true, tags: api.parseTags('work, Work, research, '), metadataChanged: true }])[0]
+  assert.deepEqual(result, { ...data, favorite: true, tags: ['work', 'research'] })
+})
