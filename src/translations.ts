@@ -1,5 +1,14 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  "{count} selecionadas": "{count} selected",
+  "Desmarcar todas": "Deselect all",
+  "Selecionar todas": "Select all",
+  "Selecionar {title}": "Select {title}",
+  "Fechar abas após salvar": "Close tabs after saving",
+  "Salvar {count} abas": "Save {count} tabs",
+  "As abas selecionadas serão salvas e fechadas.": "Selected tabs will be saved and closed.",
+  "As abas selecionadas continuarão abertas.": "Selected tabs will stay open.",
+
   "Salvar em": "Save to",
   "Abas salvas. Tudo organizado!": "Tabs saved. All organized!",
 
