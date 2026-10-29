@@ -1,0 +1,38 @@
+const { test } = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const ts = require('typescript')
+const output = ts.transpileModule(fs.readFileSync('src/collections.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
+const api = {}
+new Function('exports', output)(api)
+const { readCollections, writeCollections } = api
+const tab = { title: 'Example', url: 'https://example.com' }
+
+test('reads array, object, single-tab and JSON legacy formats without map errors', () => {
+  for (const tabs of [[tab], { 10: tab }, tab, JSON.stringify([tab]), JSON.stringify({ 10: tab })]) {
+    const data = [{ name: 'Legacy', date: '2025-01-01', tabs }]
+    const parsed = readCollections(data)
+    assert.deepEqual(parsed[0].tabs, [tab])
+    assert.equal(parsed[0].unreadableTabs, false)
+    assert.doesNotThrow(() => parsed[0].tabs.map(t => t.title))
+    assert.deepEqual(writeCollections(parsed), data)
+  }
+})
+test('preserves unreadable records and unknown fields when other collections are saved', () => {
+  const data = [null, { name: 'Legacy', tabs: 42, custom: 'keep' }, { name: 'Partial', tabs: [null, tab, false] }]
+  const parsed = readCollections(data)
+  assert.equal(parsed.every(c => c.unreadableTabs), true)
+  assert.deepEqual(parsed[2].tabs, [tab])
+  const saved = writeCollections([...parsed, { name: 'New', date: '2026-10-29', tabs: [] }])
+  assert.deepEqual(saved.slice(0, 3), data)
+})
+test('rename changes only the selected name and preserves original legacy tabs', () => {
+  const original = { name: 'Legacy', date: '2025-01-01', tabs: { tab }, custom: { keep: true } }
+  const parsed = readCollections([original, { ...original }])
+  assert.notEqual(parsed[0].key, parsed[1].key)
+  parsed[0] = { ...parsed[0], name: 'Renamed', renamed: true }
+  assert.deepEqual(writeCollections(parsed), [{ ...original, name: 'Renamed' }, original])
+})
+test('rejects malformed containers instead of treating them as an empty writable store', () => {
+  for (const value of [null, {}, 'corrupt', 42]) assert.throws(() => readCollections(value))
+})
