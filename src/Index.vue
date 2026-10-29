@@ -6,6 +6,8 @@ import BackupTools from './BackupTools.vue'
 import Tutorial from './Tutorial.vue'
 import SiteIcon from './SiteIcon.vue'
 import CollectionPicker from './CollectionPicker.vue'
+import ConfirmDialog from './ConfirmDialog.vue'
+import { useConfirmation } from './confirmation'
 import brandIcon from '../images/tabsaver-icon.svg'
 import type { Snapshot } from './backup'
 import { usePreferences } from './preferences'
@@ -13,6 +15,7 @@ import { usePreferences } from './preferences'
 import { writeCollectionData } from './collection-storage'
 import { readCollections, writeCollections, appendTabs, replaceTabs, moveSavedTab, manualTab, parseTags, uniqueTabs } from './collections'
 import type { Tab, Collection } from './collections'
+const { confirmation, requestConfirmation, settleConfirmation } = useConfirmation()
 const openTabs = ref<Tab[]>([])
 const saveDestination = ref('new')
 const dragged = ref<{ source: string; index: number; url: string } | null>(null)
@@ -78,6 +81,7 @@ async function submitCollection() {
 }
 async function saveTabs() {
   if (!selectedTabs.value.length || busy.value) return
+  if (closeAfterSave.value && !await requestConfirmation({ title: t('Salvar e fechar as abas selecionadas?'), body: t('{count} abas serão salvas e fechadas. A página do TabSaver continua aberta.', { count: selectedTabs.value.length }), confirmLabel: t('Salvar e fechar') })) return
   busy.value = true; error.value = ''
   try {
     const snapshot = [...selectedTabs.value]
@@ -106,7 +110,10 @@ async function restore(collection: Collection) {
     notify(t('Abas abertas: {count}. Ignoradas: {skipped}.', { count: opened, skipped: collection.tabs.length - pending.length }))
   } catch { error.value = t('Não foi possível abrir esta aba.') } finally { busy.value = false }
 }
-async function closeTab(tab: Tab) { try { if (extension && tab.id !== undefined) { await chrome.tabs.remove(tab.id); await refreshTabs() } } catch { error.value = t('Não foi possível fechar esta aba.') } }
+async function closeTab(tab: Tab) {
+  if (busy.value || !await requestConfirmation({ title: t('Fechar esta aba?'), body: t('“{title}” será fechada sem salvamento automático.', { title: tab.title }), confirmLabel: t('Fechar aba'), danger: true })) return
+  try { if (extension && tab.id !== undefined) { await chrome.tabs.remove(tab.id); await refreshTabs() } } catch { error.value = t('Não foi possível fechar esta aba.') }
+}
 async function copyOriginal(collection: Collection) {
   try { await navigator.clipboard.writeText(JSON.stringify(collection.source, null, 2) ?? 'null'); notify(t('Dados originais copiados.')) }
   catch { error.value = t('Não foi possível copiar. Selecione o texto dos dados originais e copie manualmente.') }
@@ -118,7 +125,7 @@ async function favorite(collection: Collection) {
   catch { error.value = t('Não foi possível salvar a coleção. Tente novamente.') } finally { busy.value = false }
 }
 async function remove(collection: Collection) {
-  if (busy.value) return
+  if (busy.value || !await requestConfirmation({ title: t('Excluir esta coleção?'), body: t('A coleção “{name}” contém {count} abas.', { name: collection.name, count: collection.tabs.length }), confirmLabel: t('Excluir coleção'), danger: true })) return
   busy.value = true
   try {
     const recovery = { entry: writeCollections([collection])[0], index: collections.value.findIndex(c => c.key === collection.key) }
@@ -136,7 +143,7 @@ async function undoDelete() {
   } catch { error.value = t('Não foi possível recuperar a coleção.') } finally { busy.value = false }
 }
 async function deleteSavedTab(collection: Collection, index: number) {
-  if (busy.value) return
+  if (busy.value || !await requestConfirmation({ title: t('Remover esta aba da coleção?'), body: collection.tabs[index]?.title || '', confirmLabel: t('Remover aba'), danger: true })) return
   busy.value = true
   try { await persist(collections.value.map(c => c.key === collection.key ? replaceTabs(c, c.tabs.filter((_, i) => i !== index)) : c), true); notify(t('Aba removida da coleção.')) }
   catch { error.value = t('Não foi possível editar esta coleção. Os dados foram preservados.') } finally { busy.value = false }
@@ -195,7 +202,7 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
 
 <template>
   <div class="app-shell">
-    <aside class="sidebar" :inert="dialog || backupDialog || tutorialDialog || undefined">
+    <aside class="sidebar" :inert="dialog || backupDialog || tutorialDialog || !!confirmation || undefined">
       <a class="brand" href="#" @click.prevent="selected = 'all'"><img class="brand-logo" :src="brandIcon" alt="" width="37" height="37" />TabSaver<span class="brand-dot">.</span></a>
       <div class="workspace-label">{{ t('SEU ESPAÇO') }}</div>
       <button class="nav-item" :class="{ active: selected === 'all' }" @click="selected = 'all'"><LayoutGrid :size="18" /> {{ t('Todas as coleções') }} <span class="nav-count">{{ collections.length }}</span></button>
@@ -208,7 +215,7 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
       <div class="sidebar-footer"><span>{{ t('Menos abas. Mais espaço.') }}</span><Leaf :size="15" /></div>
     </aside>
 
-    <main :inert="dialog || backupDialog || tutorialDialog || undefined">
+    <main :inert="dialog || backupDialog || tutorialDialog || !!confirmation || undefined">
       <header class="topbar"><span class="breadcrumb">{{ t('Meu espaço') }} <span>/</span> <strong>{{ t('Coleções') }}</strong></span><div class="topbar-controls"><span class="local-badge"><span class="status-dot"></span> {{ t('Armazenamento local') }}</span><div class="preferences"><label class="preference-control"><Languages :size="15" /><span class="sr-only">{{ t('Idioma') }}</span><select v-model="language" :aria-label="t('Idioma')"><option value="auto">{{ t('Automático') }}</option><option value="pt-BR">Português (BR)</option><option value="en">English</option></select><ChevronDown :size="12" /></label><label class="preference-control"><SunMoon :size="15" /><span class="sr-only">{{ t('Aparência') }}</span><select v-model="theme" :aria-label="t('Aparência')"><option value="system">{{ t('Sistema') }}</option><option value="light">{{ t('Claro') }}</option><option value="dark">{{ t('Escuro') }}</option></select><ChevronDown :size="12" /></label></div><Tutorial :t="t" @modal="tutorialDialog = $event" @notice="notify" /></div></header>
       <div class="page-content">
         <section class="page-heading"><div><p class="eyebrow">{{ t('ORGANIZE AGORA. CONTINUE DEPOIS.') }}</p><h1>{{ t('Espaço para o que importa') }}<span>.</span></h1><p class="subtitle">{{ t('Guarde suas abas, libere seu navegador e retome de onde parou.') }}</p></div><button class="button primary" @click="startEdit()"><Plus :size="18" /> {{ t('Nova coleção') }}</button></section>
@@ -237,7 +244,7 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
         <footer class="page-footer"><span>{{ t('Desenvolvido por') }} <a href="https://rogerarruda.dev" target="_blank" rel="noopener noreferrer">rogerarruda.dev</a></span><span>TabSaver <span class="footer-dot">●</span> {{ t('Seu espaço de volta.') }}</span></footer>
       </div>
     </main>
-    <div v-if="message" class="toast" role="status"><Check :size="18" />{{ message }}</div>
+    <ConfirmDialog v-if="confirmation" :options="confirmation" :cancel-label="t('Cancelar')" @result="settleConfirmation" /><div v-if="message" class="toast" role="status"><Check :size="18" />{{ message }}</div>
     <div v-if="dialog" class="modal-backdrop" @click.self="dialog = false" @keydown.esc="dialog = false"><form class="modal" role="dialog" aria-modal="true" aria-labelledby="dialog-title" @submit.prevent="submitCollection" @keydown.tab="trapFocus"><div class="modal-heading"><span class="folder-tile mint"><Folder :size="23" /></span><button type="button" class="icon-button" :aria-label="t('Fechar')" @click="dialog = false"><X :size="20" /></button></div><h2 id="dialog-title">{{ editing ? t('Renomear coleção') : t('Um novo espaço para suas abas') }}</h2><p>{{ t('Escolha um nome que ajude você a encontrar suas ideias.') }}</p><label for="collection-name">{{ t('Nome da coleção') }}</label><input id="collection-name" v-model="name" v-focus maxlength="100" :placeholder="t('Ex.: Leituras para depois')" required /><label for="collection-tags" class="tags-label">{{ t('Etiquetas (separadas por vírgula)') }}</label><input id="collection-tags" v-model="tags" maxlength="600" :placeholder="t('Ex.: trabalho, pesquisa')" /><div class="modal-actions"><button type="button" class="button" @click="dialog = false">{{ t('Cancelar') }}</button><button class="button primary" :disabled="!name.trim() || busy">{{ editing ? t('Salvar nome') : t('Criar coleção') }}</button></div></form></div>
   </div>
 </template>

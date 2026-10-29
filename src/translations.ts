@@ -1,5 +1,16 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  "Salvar e fechar as abas selecionadas?": "Save and close the selected tabs?",
+  "{count} abas serão salvas e fechadas. A página do TabSaver continua aberta.": "{count} tabs will be saved and closed. The TabSaver page stays open.",
+  "Salvar e fechar": "Save and close",
+  "Fechar esta aba?": "Close this tab?",
+  "“{title}” será fechada sem salvamento automático.": "“{title}” will be closed without being saved automatically.",
+  "Fechar aba": "Close tab",
+  "Excluir esta coleção?": "Delete this collection?",
+  "A coleção “{name}” contém {count} abas.": "The collection “{name}” contains {count} tabs.",
+  "Remover esta aba da coleção?": "Remove this tab from the collection?",
+  "Remover aba": "Remove tab",
+
   "Arrastar {title}": "Drag {title}",
   "Arraste pela alça para outra coleção ou use Mover para.": "Drag the handle onto another collection or use Move to.",
 
