@@ -12,7 +12,8 @@
   },
   "permissions": [
     "tabs",
-    "storage"
+    "storage",
+    "favicon"
   ],
   "action": {
     "default_title": "Abrir TabSaver",
