@@ -63,3 +63,10 @@ test('favorite and tags updates preserve unreadable legacy tabs and metadata', (
   const result = writeCollections([{ ...parsed, favorite: true, tags: api.parseTags('work, Work, research, '), metadataChanged: true }])[0]
   assert.deepEqual(result, { ...data, favorite: true, tags: ['work', 'research'] })
 })
+
+test('duplicates compare normalized URLs while preserving query and fragment differences', () => {
+  const tabs = [{ title: 'A', url: 'https://EXAMPLE.com' }, { title: 'B', url: 'https://example.com/' }, { title: 'C', url: 'https://example.com/#section' }, { title: 'D', url: 'https://example.com/?q=test' }]
+  assert.equal(api.uniqueTabs(tabs).length, 3)
+  assert.equal(api.uniqueTabs(tabs, [tab]).length, 2)
+  assert.equal(tabs.length, 4)
+})

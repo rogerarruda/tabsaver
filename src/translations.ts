@@ -1,5 +1,9 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  "Ignorar abas duplicadas": "Skip duplicate tabs",
+  "{count} duplicadas identificadas": "{count} duplicates found",
+  "{count} abas abertas. {skipped} já abertas ou repetidas.": "{count} tabs opened. {skipped} already open or duplicated.",
+
   "Favoritos": "Favorites",
   "Remover dos favoritos": "Remove from favorites",
   "Adicionar aos favoritos": "Add to favorites",

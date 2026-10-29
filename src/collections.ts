@@ -77,3 +77,11 @@ export function parseTags(text: string): string[] {
   const seen = new Set<string>()
   return text.split(',').map(tag => tag.trim().slice(0, 40)).filter(tag => { const key = tag.toLocaleLowerCase(); if (!tag || seen.has(key)) return false; seen.add(key); return true }).slice(0, 20)
 }
+
+export function urlKey(address: string): string {
+  try { return new URL(address).href } catch { return address }
+}
+export function uniqueTabs(tabs: Tab[], existing: Tab[] = []): Tab[] {
+  const seen = new Set(existing.map(tab => urlKey(tab.url)))
+  return tabs.filter(tab => { const key = urlKey(tab.url); if (seen.has(key)) return false; seen.add(key); return true })
+}
