@@ -3,7 +3,7 @@
   "manifest_version": 3,
   "version": "0.0.2",
   "name": "tabsaver",
-  "description": "An Extension.js example.",
+  "description": "Salve e organize suas abas em coleções, libere memória do navegador e retome de onde parou.",
   "icons": {
     "48": "images/extension_48.png"
   },
