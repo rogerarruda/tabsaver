@@ -2,11 +2,11 @@
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { AlertTriangle } from 'lucide-vue-next'
 import type { Confirmation } from './confirmation'
-defineProps<{ options: Confirmation; cancelLabel: string }>()
+const props = defineProps<{ options: Confirmation; cancelLabel: string; returnFocus?: HTMLElement | null }>()
 const emit = defineEmits<{ result: [confirmed: boolean] }>()
 const cancel = ref<HTMLButtonElement | null>(null)
 let previous: HTMLElement | null = null
-onMounted(() => { previous = document.activeElement as HTMLElement; cancel.value?.focus() })
+onMounted(() => { previous = props.returnFocus || document.activeElement as HTMLElement; cancel.value?.focus() })
 onBeforeUnmount(() => { const target = previous; nextTick(() => { if (target?.isConnected) target.focus() }) })
 function trap(event: KeyboardEvent) {
   const buttons = [...(event.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>('button')]

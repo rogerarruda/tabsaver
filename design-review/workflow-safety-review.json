@@ -1,0 +1,42 @@
+{
+  "contract": "Controles de expandir no topo e rodapé; arrastar abas entre coleções; destino pesquisável em ordem de data; confirmação de fechamento/exclusão; aviso a partir de dez abas novas; lixeira persistente com restauração e exclusão permanente.",
+  "targetViewports": [
+    "1440x900",
+    "390x844"
+  ],
+  "checks": {
+    "collapse": "Dois controles aria-expanded encontrados na coleção expandida.",
+    "drag": "DragEvent e DataTransfer enviados pela alça a outro cartão; movimento alterou contagens de 1/0 para 0/1.",
+    "picker": "60 coleções: primeiro destino foi o mais recente, lista limitada a 230px; pesquisa retornou uma coleção e seleção fechou painel.",
+    "confirmClose": "Cancelar manteve todas as abas; confirmar fechou a aba escolhida.",
+    "confirmSave": "Uma aba criada durante confirmação não foi incluída: três confirmadas foram salvas/fechadas e a quarta permaneceu aberta.",
+    "bulkOpen": "Coleção de 12 abas mostrou aviso antes de criar qualquer aba; cancelar manteve zero abertas; confirmar criou 12 em segundo plano.",
+    "trash": "Coleção e aba removidas foram movidas com confirmação e restauradas; cancelar esvaziamento preservou os itens e confirmar esvaziou.",
+    "persistence": "Na prévia com localStorage real, coleção continuou na lixeira após recarregar e foi restaurada com campos extras. Exportação incluiu um item da lixeira.",
+    "keyboard": "Tab no último botão da confirmação voltou ao cancelar; ao cancelar, foco retornou ao botão original.",
+    "responsive": "Sem overflow horizontal em 1440x900 e 390x844. Lixeira esconde painel de abas abertas para priorizar itens. Títulos longos quebram linha."
+  },
+  "validation": [
+    "25 testes passaram",
+    "Build de produção passou",
+    "TypeScript dos módulos de lógica passou",
+    "git diff --check passou"
+  ],
+  "limitations": [
+    "Operações de abas no navegador foram verificadas com API Chrome simulada, não na instalação real.",
+    "Arrastar foi verificado com eventos DOM e DataTransfer; telas de toque e teclado mantêm alternativa Mover para.",
+    "Auditoria completa de contraste e leitor de tela não executada."
+  ],
+  "renderedEvidence": [
+    {
+      "viewport": "1440x900",
+      "artifact": "safety-desktop.png",
+      "observation": "Aviso de abertura de 12 abas com cancelar em foco."
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "trash-mobile.png",
+      "observation": "Lixeira em tema escuro, dois tipos de item e títulos longos."
+    }
+  ]
+}
