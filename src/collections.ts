@@ -94,3 +94,8 @@ export function quickSave(collections: unknown[], tab: Tab, name: string): unkno
   result[index] = writeCollections([appendTabs(collection, uniqueTabs([tab], collection.tabs))])[0]
   return result
 }
+
+export function recentCollections(collections: Collection[]): Collection[] {
+  const time = (date: string) => Number.isFinite(Date.parse(date)) ? Date.parse(date) : -Infinity
+  return [...collections].sort((a, b) => time(b.date) - time(a.date))
+}

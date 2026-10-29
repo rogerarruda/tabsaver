@@ -1,5 +1,9 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  "Buscar coleção": "Search collections",
+  "Mais recentes primeiro": "Newest first",
+  "Nenhuma coleção encontrada.": "No collections found.",
+
   "Selecionadas: {count}": "Selected: {count}",
   "Duplicadas: {count}": "Duplicates: {count}",
   "Abas abertas: {count}. Ignoradas: {skipped}.": "Tabs opened: {count}. Skipped: {skipped}.",

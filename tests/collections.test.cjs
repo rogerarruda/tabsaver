@@ -81,3 +81,9 @@ test('context menu quick saves preserve all collections and skip duplicate links
   assert.equal(second[1].quickSave, true)
   assert.throws(() => api.quickSave([{ quickSave: true, tabs: 42 }], tab, 'Quick saves'))
 })
+
+test('destination options sort by descending creation date without mutating the source', () => {
+  const collections = [{ name: 'Old', date: '2020-01-01' }, { name: 'Unknown', date: '' }, { name: 'New', date: '2026-01-01' }]
+  assert.deepEqual(api.recentCollections(collections).map(c => c.name), ['New', 'Old', 'Unknown'])
+  assert.equal(collections[0].name, 'Old')
+})
