@@ -1,5 +1,9 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  "Abrir muitas abas?": "Open many tabs?",
+  "Serão abertas {count} abas de “{name}”. Isso pode consumir bastante memória e deixar o computador lento. Deseja continuar?": "{count} tabs from “{name}” will be opened. This may use a lot of memory and slow down your computer. Do you want to continue?",
+  "Abrir abas": "Open tabs",
+
   "Salvar e fechar as abas selecionadas?": "Save and close the selected tabs?",
   "{count} abas serão salvas e fechadas. A página do TabSaver continua aberta.": "{count} tabs will be saved and closed. The TabSaver page stays open.",
   "Salvar e fechar": "Save and close",

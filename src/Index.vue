@@ -95,8 +95,8 @@ async function saveTabs() {
     selected.value = 'all'; notify(t('Abas salvas. Tudo organizado!'))
   } catch { error.value = t('Não foi possível concluir. Confira a coleção salva antes de tentar novamente.') } finally { busy.value = false }
 }
-async function openTab(url: string): Promise<boolean> {
-  try { if (extension) await chrome.tabs.create({ url }); else window.open(url, '_blank', 'noopener,noreferrer'); return true }
+async function openTab(url: string, active = true): Promise<boolean> {
+  try { if (extension) await chrome.tabs.create({ url, active }); else window.open(url, '_blank', 'noopener,noreferrer'); return true }
   catch { error.value = t('Não foi possível abrir esta aba.'); return false }
 }
 async function restore(collection: Collection) {
@@ -104,9 +104,14 @@ async function restore(collection: Collection) {
   busy.value = true
   try {
     const current = extension ? (await chrome.tabs.query({ currentWindow: true })).filter(tab => tab.url).map(tab => ({ title: tab.title || '', url: tab.url! })) : []
-    const pending = uniqueTabs(collection.tabs, current)
+    let pending = uniqueTabs(collection.tabs, current)
+    if (pending.length >= 10) {
+      if (!await requestConfirmation({ title: t('Abrir muitas abas?'), body: t('Serão abertas {count} abas de “{name}”. Isso pode consumir bastante memória e deixar o computador lento. Deseja continuar?', { count: pending.length, name: collection.name }), confirmLabel: t('Abrir abas') })) return
+      const fresh = extension ? (await chrome.tabs.query({ currentWindow: true })).filter(tab => tab.url).map(tab => ({ title: tab.title || '', url: tab.url! })) : []
+      pending = uniqueTabs(pending, fresh)
+    }
     let opened = 0
-    for (const tab of pending) if (await openTab(tab.url)) opened++
+    for (const tab of pending) if (await openTab(tab.url, false)) opened++
     notify(t('Abas abertas: {count}. Ignoradas: {skipped}.', { count: opened, skipped: collection.tabs.length - pending.length }))
   } catch { error.value = t('Não foi possível abrir esta aba.') } finally { busy.value = false }
 }
