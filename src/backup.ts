@@ -50,3 +50,21 @@ export async function writeBackupStorage(snapshot: Snapshot, recovery: Snapshot 
   try { for (const [key, value] of Object.entries(values)) localStorage.setItem(key, value) }
   catch (error) { for (const [key, value] of before) { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value) } throw error }
 }
+
+export type BackupMarker = { fingerprint?: string; date?: string; snoozeUntil?: number }
+export async function backupFingerprint(snapshot: Snapshot): Promise<string> {
+  const bytes = new TextEncoder().encode(canonical(snapshot))
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  return [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, '0')).join('')
+}
+export async function readBackupMarker(): Promise<BackupMarker> {
+  const raw = extension() ? (await chrome.storage.local.get({ backupMarker: {} })).backupMarker : JSON.parse(localStorage.getItem('tabsaver-backupMarker') || '{}')
+  return object(raw) ? raw : {}
+}
+export async function writeBackupMarker(marker: BackupMarker) {
+  if (extension()) await chrome.storage.local.set({ backupMarker: marker })
+  else localStorage.setItem('tabsaver-backupMarker', JSON.stringify(marker))
+}
+export async function markBackupExport(snapshot: Snapshot) {
+  await writeBackupMarker({ fingerprint: await backupFingerprint(snapshot), date: new Date().toISOString(), snoozeUntil: 0 })
+}

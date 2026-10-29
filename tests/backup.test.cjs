@@ -55,3 +55,11 @@ test('preview rolls back writes when local storage fails halfway through', async
   assert.equal(values.has('tabsaver-recovery'), false)
   delete global.localStorage
 })
+
+test('backup fingerprints ignore object key order and detect actual changes', async () => {
+  const a = await api.backupFingerprint(snapshot)
+  const b = await api.backupFingerprint({ preferences: prefs, collections: snapshot.collections })
+  assert.equal(a, b)
+  assert.equal(a.length, 64)
+  assert.notEqual(a, await api.backupFingerprint({ ...snapshot, collections: [] }))
+})

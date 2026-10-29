@@ -1,5 +1,11 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  "Não foi possível adiar o lembrete.": "Could not snooze the reminder.",
+  "O arquivo foi preparado, mas não foi possível registrar a data da exportação.": "The file was prepared, but the export date could not be recorded.",
+  "Há alterações sem uma exportação recente. Salve um backup.": "You have changes since your last export. Save a backup.",
+  "Lembrar amanhã": "Remind me tomorrow",
+  "Última exportação preparada:": "Last export prepared:",
+
   "Ignorar abas duplicadas": "Skip duplicate tabs",
   "{count} duplicadas identificadas": "{count} duplicates found",
   "{count} abas abertas. {skipped} já abertas ou repetidas.": "{count} tabs opened. {skipped} already open or duplicated.",
