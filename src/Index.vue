@@ -7,12 +7,15 @@ import Tutorial from './Tutorial.vue'
 import SiteIcon from './SiteIcon.vue'
 import CollectionPicker from './CollectionPicker.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
+import TrashPanel from './TrashPanel.vue'
+import { readTrash, deletedCollection, deletedTab, restoreDeleted, migrateLastDeleted } from './trash'
+import type { TrashEntry } from './trash'
 import { useConfirmation } from './confirmation'
 import brandIcon from '../images/tabsaver-icon.svg'
 import type { Snapshot } from './backup'
 import { usePreferences } from './preferences'
 
-import { writeCollectionData } from './collection-storage'
+import { writeCollectionData, writeAuxiliaryData } from './collection-storage'
 import { readCollections, writeCollections, appendTabs, replaceTabs, moveSavedTab, manualTab, parseTags, uniqueTabs } from './collections'
 import type { Tab, Collection } from './collections'
 const { confirmation, requestConfirmation, settleConfirmation } = useConfirmation()
@@ -42,7 +45,8 @@ const loading = ref(true)
 const message = ref('')
 const error = ref('')
 const storageUnavailable = ref(false)
-const lastDeleted = ref<{ entry: unknown; index: number } | null>(null)
+const trash = ref<TrashEntry[]>([])
+const trashAvailable = ref(true)
 const { language, theme, locale, t, loadPreferences, applyPreferences, flushPreferences } = usePreferences(text => error.value = text)
 let noticeTimer: ReturnType<typeof setTimeout>
 const extension = typeof chrome !== 'undefined' && !!chrome.storage?.local && !!chrome.tabs
@@ -81,17 +85,18 @@ async function submitCollection() {
 }
 async function saveTabs() {
   if (!selectedTabs.value.length || busy.value) return
-  if (closeAfterSave.value && !await requestConfirmation({ title: t('Salvar e fechar as abas selecionadas?'), body: t('{count} abas serão salvas e fechadas. A página do TabSaver continua aberta.', { count: selectedTabs.value.length }), confirmLabel: t('Salvar e fechar') })) return
+  const snapshot = [...selectedTabs.value], destinationKey = saveDestination.value, shouldClose = closeAfterSave.value, skipDuplicates = ignoreDuplicates.value
+  const originalDestination = collections.value.find(c => c.key === destinationKey)
+  if (shouldClose && !await requestConfirmation({ title: t('Salvar e fechar as abas selecionadas?'), body: t('Abas a salvar e fechar: {count}. A página do TabSaver continua aberta.', { count: snapshot.length }), confirmLabel: t('Salvar e fechar') })) return
   busy.value = true; error.value = ''
   try {
-    const snapshot = [...selectedTabs.value]
     const date = new Date()
-    const destination = collections.value.find(c => c.key === saveDestination.value)
-    if (saveDestination.value !== 'new' && !destination) throw new Error('Missing collection')
-    const tabsToSave = ignoreDuplicates.value ? uniqueTabs(snapshot, destination?.tabs) : snapshot
+    const destination = collections.value.find(c => c.key === destinationKey)
+    if (destinationKey !== 'new' && (!destination || !originalDestination || JSON.stringify(writeCollections([destination])) !== JSON.stringify(writeCollections([originalDestination])))) throw new Error('Destination changed')
+    const tabsToSave = skipDuplicates ? uniqueTabs(snapshot, destination?.tabs) : snapshot
     await persist(destination ? collections.value.map(c => c.key === destination.key ? appendTabs(c, tabsToSave) : c) : [...collections.value, { name: t('Sessão de {date} · {time}', { date: date.toLocaleDateString(locale.value, { day: 'numeric', month: 'short' }), time: date.toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' }) }), tabs: tabsToSave.map(({ title, url }) => ({ title, url })), date: date.toISOString() }])
     saveDestination.value = 'new'
-    if (extension && closeAfterSave.value) { const current = await chrome.tabs.getCurrent(); const ids = snapshot.filter(t => t.id !== current?.id && t.id !== undefined).map(t => t.id!); if (ids.length) await chrome.tabs.remove(ids); await refreshTabs() }
+    if (extension && shouldClose) { const current = await chrome.tabs.getCurrent(); const ids = snapshot.filter(t => t.id !== current?.id && t.id !== undefined).map(t => t.id!); if (ids.length) await chrome.tabs.remove(ids); await refreshTabs() }
     selected.value = 'all'; notify(t('Abas salvas. Tudo organizado!'))
   } catch { error.value = t('Não foi possível concluir. Confira a coleção salva antes de tentar novamente.') } finally { busy.value = false }
 }
@@ -129,29 +134,41 @@ async function favorite(collection: Collection) {
   try { await persist(collections.value.map(c => c.key === collection.key ? { ...c, favorite: !c.favorite, metadataChanged: true } : c), true) }
   catch { error.value = t('Não foi possível salvar a coleção. Tente novamente.') } finally { busy.value = false }
 }
-async function remove(collection: Collection) {
-  if (busy.value || !await requestConfirmation({ title: t('Excluir esta coleção?'), body: t('A coleção “{name}” contém {count} abas.', { name: collection.name, count: collection.tabs.length }), confirmLabel: t('Excluir coleção'), danger: true })) return
-  busy.value = true
-  try {
-    const recovery = { entry: writeCollections([collection])[0], index: collections.value.findIndex(c => c.key === collection.key) }
-    await persist(collections.value.filter(c => c.key !== collection.key), false, { lastDeleted: recovery })
-    lastDeleted.value = recovery; notify(t('Coleção excluída. Você pode desfazer.'))
-  } catch { error.value = t('Não foi possível excluir a coleção.') } finally { busy.value = false }
+function ensureCollection(collection: Collection) {
+  const current = collections.value.find(c => c.key === collection.key)
+  if (!current || JSON.stringify(writeCollections([current])) !== JSON.stringify(writeCollections([collection]))) throw new Error('Collection changed')
 }
-async function undoDelete() {
-  if (!lastDeleted.value || busy.value) return
+function loadTrash(value: unknown) {
+  try { trash.value = readTrash(value); trashAvailable.value = true }
+  catch { trashAvailable.value = false; error.value = t('Não foi possível carregar a lixeira. Recarregue para tentar novamente.') }
+}
+async function restoreTrashItem(entry: TrashEntry) {
+  if (busy.value || !trashAvailable.value) return
+  busy.value = true
+  try { const remaining = trash.value.filter(item => item.id !== entry.id); await persist(restoreDeleted(collections.value, entry), false, { trash: remaining, lastDeleted: null }); trash.value = remaining; notify(t('Item restaurado.')) }
+  catch { error.value = t('Não foi possível restaurar o item. Os dados foram preservados.') } finally { busy.value = false }
+}
+async function permanentlyDelete(entry?: TrashEntry) {
+  if (busy.value || !trashAvailable.value || !await requestConfirmation({ title: entry ? t('Excluir definitivamente?') : t('Esvaziar a lixeira?'), body: t('Os itens serão removidos da lixeira e não poderão ser restaurados por ela.'), confirmLabel: entry ? t('Excluir definitivamente') : t('Esvaziar lixeira'), danger: true })) return
+  busy.value = true
+  try { const remaining = entry ? trash.value.filter(item => item.id !== entry.id) : []; await writeAuxiliaryData({ trash: remaining, lastDeleted: null }); trash.value = remaining; notify(t('Lixeira atualizada.')) }
+  catch { error.value = t('Não foi possível atualizar a lixeira.') } finally { busy.value = false }
+}
+async function remove(collection: Collection) {
+  if (busy.value || !trashAvailable.value || !await requestConfirmation({ title: t('Mover coleção para a lixeira?'), body: t('A coleção “{name}” contém {count} abas. Você poderá restaurá-la na lixeira.', { name: collection.name, count: collection.tabs.length }), confirmLabel: t('Mover para lixeira'), danger: true })) return
   busy.value = true
   try {
-    const raw = writeCollections(collections.value)
-    raw.splice(Math.min(Math.max(lastDeleted.value.index, 0), raw.length), 0, lastDeleted.value.entry)
-    await persist(readCollections(raw), false, { lastDeleted: null }); lastDeleted.value = null; notify(t('Coleção recuperada.'))
-  } catch { error.value = t('Não foi possível recuperar a coleção.') } finally { busy.value = false }
+    ensureCollection(collection)
+    const nextTrash = [...trash.value, deletedCollection(collection, collections.value.findIndex(c => c.key === collection.key))]
+    await persist(collections.value.filter(c => c.key !== collection.key), false, { trash: nextTrash, lastDeleted: null })
+    trash.value = nextTrash; notify(t('Coleção movida para a lixeira.'))
+  } catch { error.value = t('Não foi possível mover para a lixeira. Os dados foram preservados.') } finally { busy.value = false }
 }
 async function deleteSavedTab(collection: Collection, index: number) {
-  if (busy.value || !await requestConfirmation({ title: t('Remover esta aba da coleção?'), body: collection.tabs[index]?.title || '', confirmLabel: t('Remover aba'), danger: true })) return
+  if (busy.value || !trashAvailable.value || !await requestConfirmation({ title: t('Mover aba para a lixeira?'), body: collection.tabs[index]?.title || '', confirmLabel: t('Mover para lixeira'), danger: true })) return
   busy.value = true
-  try { await persist(collections.value.map(c => c.key === collection.key ? replaceTabs(c, c.tabs.filter((_, i) => i !== index)) : c), true); notify(t('Aba removida da coleção.')) }
-  catch { error.value = t('Não foi possível editar esta coleção. Os dados foram preservados.') } finally { busy.value = false }
+  try { ensureCollection(collection); const nextTrash = [...trash.value, deletedTab(collection, index)]; await persist(collections.value.map(c => c.key === collection.key ? replaceTabs(c, c.tabs.filter((_, i) => i !== index)) : c), true, { trash: nextTrash }); trash.value = nextTrash; notify(t('Aba movida para a lixeira.')) }
+  catch { error.value = t('Não foi possível mover para a lixeira. Os dados foram preservados.') } finally { busy.value = false }
 }
 function beginDrag(collection: Collection, index: number, event: DragEvent) {
   if (busy.value || collection.unreadableTabs || !event.dataTransfer) { event.preventDefault(); return }
@@ -193,13 +210,13 @@ function loadCollections(value: unknown) {
   try { collections.value = readCollections(value); storageUnavailable.value = false; endDrag(); saveDestination.value = 'new' }
   catch { storageUnavailable.value = true; error.value = t('Não foi possível carregar suas coleções. Recarregue para tentar novamente.') }
 }
-function backupRestored(snapshot: Snapshot) { loadCollections(snapshot.collections); applyPreferences(snapshot.preferences); selected.value = 'all'; expanded.value = []; query.value = ''; error.value = ''; lastDeleted.value = null }
-function storageChanged(changes: { [key: string]: chrome.storage.StorageChange }, area: string) { if (area === 'local') { if (changes.collections) loadCollections(changes.collections.newValue ?? []); if (changes.lastDeleted) lastDeleted.value = changes.lastDeleted.newValue || null } }
+function backupRestored(snapshot: Snapshot) { loadCollections(snapshot.collections); applyPreferences(snapshot.preferences); selected.value = 'all'; expanded.value = []; query.value = ''; error.value = ''; if (snapshot.trash) loadTrash(snapshot.trash) }
+function storageChanged(changes: { [key: string]: chrome.storage.StorageChange }, area: string) { if (area === 'local') { if (changes.collections) loadCollections(changes.collections.newValue ?? []); if (changes.trash) loadTrash(changes.trash.newValue ?? []) } }
 onMounted(async () => {
   await loadPreferences()
   try {
-    if (extension) { const data = await chrome.storage.local.get({ collections: [], lastDeleted: null }); loadCollections(data.collections); lastDeleted.value = data.lastDeleted; await refreshTabs(); chrome.tabs.onCreated.addListener(refreshTabs); chrome.tabs.onRemoved.addListener(refreshTabs); chrome.tabs.onUpdated.addListener(refreshTabs); chrome.storage.onChanged.addListener(storageChanged) }
-    else { loadCollections(JSON.parse(localStorage.getItem('tabsaver-preview') || '[]')); lastDeleted.value = JSON.parse(localStorage.getItem('tabsaver-lastDeleted') || 'null') }
+    if (extension) { const data = await chrome.storage.local.get({ collections: [], trash: [], lastDeleted: null }); loadCollections(data.collections); loadTrash(data.trash); if (trashAvailable.value && data.lastDeleted) { const migrated = migrateLastDeleted(trash.value, data.lastDeleted); await writeAuxiliaryData({ trash: migrated, lastDeleted: null }); loadTrash(migrated) }; await refreshTabs(); chrome.tabs.onCreated.addListener(refreshTabs); chrome.tabs.onRemoved.addListener(refreshTabs); chrome.tabs.onUpdated.addListener(refreshTabs); chrome.storage.onChanged.addListener(storageChanged) }
+    else { loadCollections(JSON.parse(localStorage.getItem('tabsaver-preview') || '[]')); loadTrash(JSON.parse(localStorage.getItem('tabsaver-trash') || '[]')); const previous = JSON.parse(localStorage.getItem('tabsaver-lastDeleted') || 'null'); if (trashAvailable.value && previous) { const migrated = migrateLastDeleted(trash.value, previous); await writeAuxiliaryData({ trash: migrated, lastDeleted: null }); loadTrash(migrated) } }
   } catch { storageUnavailable.value = true; error.value = t('Não foi possível carregar suas coleções. Recarregue para tentar novamente.') } finally { loading.value = false }
 })
 onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.onCreated.removeListener(refreshTabs); chrome.tabs.onRemoved.removeListener(refreshTabs); chrome.tabs.onUpdated.removeListener(refreshTabs); chrome.storage.onChanged.removeListener(storageChanged) } })
@@ -211,7 +228,7 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
       <a class="brand" href="#" @click.prevent="selected = 'all'"><img class="brand-logo" :src="brandIcon" alt="" width="37" height="37" />TabSaver<span class="brand-dot">.</span></a>
       <div class="workspace-label">{{ t('SEU ESPAÇO') }}</div>
       <button class="nav-item" :class="{ active: selected === 'all' }" @click="selected = 'all'"><LayoutGrid :size="18" /> {{ t('Todas as coleções') }} <span class="nav-count">{{ collections.length }}</span></button>
-      <button class="nav-item" :class="{ active: selected === 'favorites' }" @click="selected = 'favorites'"><Star :size="18" />{{ t('Favoritos') }}<span class="nav-count">{{ collections.filter(c => c.favorite).length }}</span></button><div class="sidebar-section"><span>{{ t('COLEÇÕES') }}</span><button class="icon-button" :aria-label="t('Criar coleção')" @click="startEdit()"><Plus :size="17" /></button></div>
+      <button class="nav-item" :class="{ active: selected === 'favorites' }" @click="selected = 'favorites'"><Star :size="18" />{{ t('Favoritos') }}<span class="nav-count">{{ collections.filter(c => c.favorite).length }}</span></button><button class="nav-item" :class="{ active: selected === 'trash' }" @click="selected = 'trash'"><Trash2 :size="17" />{{ t('Lixeira') }}<span class="nav-count">{{ trash.length }}</span></button><div class="sidebar-section"><span>{{ t('COLEÇÕES') }}</span><button class="icon-button" :aria-label="t('Criar coleção')" @click="startEdit()"><Plus :size="17" /></button></div>
       <nav class="collection-nav" :aria-label="t('Coleções')">
         <button v-for="collection in [...collections].sort((a,b) => b.date.localeCompare(a.date))" :key="collection.key" class="nav-item" :class="{ active: selected === collection.key, 'drop-over': dropOver === collection.key }" @dragover="allowDrop(collection, $event)" @dragleave="dropOver = ''" @drop.prevent="dropTab(collection)" @click="selected = collection.key!"><Folder :size="17" /><span class="nav-name">{{ collection.name }}</span><span class="nav-count">{{ collection.tabs.length }}</span></button>
         <p v-if="!collections.length" class="sidebar-empty">{{ t('Um lugar para cada ideia.') }}<br>{{ t('Crie sua primeira coleção.') }}</p>
@@ -231,8 +248,8 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
         <BackupTools :revision="[collections, language, theme]" :t="t" :locale="locale" :flush-preferences="flushPreferences" @restored="backupRestored" @notice="notify" @modal="backupDialog = $event" />
         <div class="content-layout">
           <section class="collections-section">
-            <div v-if="lastDeleted" class="undo-banner" role="status"><span>{{ t('Uma coleção foi excluída.') }}</span><button class="text-button" :disabled="busy" @click="undoDelete">{{ t('Desfazer exclusão') }}</button></div><div class="section-heading"><h2>{{ heading }} <span>{{ visible.length }}</span></h2><label class="sort-label"><span class="sr-only">{{ t('Ordenar coleções') }}</span><select v-model="sort"><option value="newest">{{ t('Mais recentes') }}</option><option value="oldest">{{ t('Mais antigas') }}</option><option value="name">{{ t('Nome A–Z') }}</option></select><ChevronDown :size="14" /></label></div>
-            <div class="filter-bar"><button class="text-button" @click="selected = selected === 'favorites' ? 'all' : 'favorites'"><Star :size="14" />{{ selected === 'favorites' ? t('Todas as coleções') : t('Favoritos') }}</button></div><label class="search-field"><Search :size="18" /><input v-model="query" :placeholder="t('Buscar coleções ou abas…')" :aria-label="t('Buscar coleções ou abas')" /><button v-if="query" class="icon-button" :aria-label="t('Limpar busca')" @click="query = ''"><X :size="16" /></button></label>
+            <div v-if="selected === 'trash'" class="filter-bar"><button class="text-button" @click="selected = 'all'">{{ t('Todas as coleções') }}</button></div><TrashPanel v-if="selected === 'trash'" :entries="trash" :t="t" :locale="locale" :busy="busy || !trashAvailable" @restore="restoreTrashItem" @remove="permanentlyDelete" @empty="permanentlyDelete()" /><template v-else><div v-if="trash.length" class="undo-banner"><span>{{ t('Há itens na lixeira.') }}</span><button class="text-button" @click="selected = 'trash'">{{ t('Ver lixeira') }}</button></div><div class="section-heading"><h2>{{ heading }} <span>{{ visible.length }}</span></h2><label class="sort-label"><span class="sr-only">{{ t('Ordenar coleções') }}</span><select v-model="sort"><option value="newest">{{ t('Mais recentes') }}</option><option value="oldest">{{ t('Mais antigas') }}</option><option value="name">{{ t('Nome A–Z') }}</option></select><ChevronDown :size="14" /></label></div>
+            <div class="filter-bar"><button class="text-button" @click="selected = 'trash'"><Trash2 :size="14" />{{ t('Lixeira') }} ({{ trash.length }})</button><button class="text-button" @click="selected = selected === 'favorites' ? 'all' : 'favorites'"><Star :size="14" />{{ selected === 'favorites' ? t('Todas as coleções') : t('Favoritos') }}</button></div><label class="search-field"><Search :size="18" /><input v-model="query" :placeholder="t('Buscar coleções ou abas…')" :aria-label="t('Buscar coleções ou abas')" /><button v-if="query" class="icon-button" :aria-label="t('Limpar busca')" @click="query = ''"><X :size="16" /></button></label>
             <div v-if="loading" class="empty-state" role="status">{{ t('Carregando suas coleções…') }}</div>
             <div v-else-if="!visible.length" class="empty-state"><span class="empty-icon"><component :is="query ? Search : Layers" :size="30" /></span><h3>{{ query ? t('Nenhum resultado por aqui') : t('Suas próximas ideias moram aqui') }}</h3><p>{{ query ? t('Tente outro nome, site ou palavra-chave.') : t('Salve as abas abertas ou crie uma coleção para começar a organizar seu espaço.') }}</p><button class="button" @click="query ? query = '' : startEdit()"><Plus v-if="!query" :size="17" />{{ query ? t('Limpar busca') : t('Criar primeira coleção') }}</button></div>
             <article v-for="(collection, index) in visible" :key="collection.key" class="collection-card" :class="{ 'drop-target': dragged && dragged.source !== collection.key && !collection.unreadableTabs, 'drop-over': dropOver === collection.key }" @dragover="allowDrop(collection, $event)" @dragleave.self="dropOver = ''" @drop.prevent="dropTab(collection)">
@@ -242,7 +259,7 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
               <div v-if="expanded.includes(collection.key!)" class="saved-tab-list"><p class="drag-hint">{{ t('Arraste pela alça para outra coleção ou use Mover para.') }}</p><div v-for="(tab, tabIndex) in collection.tabs" :key="tabIndex" class="saved-tab"><button class="icon-button drag-handle" type="button" :draggable="!busy && !collection.unreadableTabs" :disabled="busy || collection.unreadableTabs" :aria-label="t('Arrastar {title}', { title: tab.title })" @dragstart="beginDrag(collection, tabIndex, $event)" @dragend="endDrag"><GripVertical :size="16" /></button><a class="saved-tab-link" :href="tab.url" @click.prevent="openTab(tab.url)"><SiteIcon :url="tab.url" /><span class="saved-tab-info"><strong>{{ tab.title }}</strong><small>{{ domain(tab.url) }}</small></span><ArrowUpRight :size="16" /></a><select class="move-select" :aria-label="t('Mover {title}', { title: tab.title })" :disabled="busy || collection.unreadableTabs" value="" @change="moveTab(collection, tabIndex, $event)"><option value="">{{ t('Mover para…') }}</option><option v-for="target in collections.filter(c => c.key !== collection.key && !c.unreadableTabs)" :key="target.key" :value="target.key">{{ target.name }}</option></select><button class="icon-button delete-button" :aria-label="t('Remover {title}', { title: tab.title })" :disabled="busy || collection.unreadableTabs" @click="deleteSavedTab(collection, tabIndex)"><X :size="15" /></button></div><form v-if="!collection.unreadableTabs" class="add-tab-form" @submit.prevent="addTab(collection, $event)"><input name="title" :placeholder="t('Título (opcional)')" :aria-label="t('Título (opcional)')" maxlength="500" /><input name="url" type="url" placeholder="https://…" :aria-label="t('Endereço da aba')" required /><button class="button" :disabled="busy"><Plus :size="15" />{{ t('Adicionar aba') }}</button></form></div>
               <div class="card-footer"><button class="text-button" :aria-expanded="expanded.includes(collection.key!)" @click="toggle(collection.key!)">{{ expanded.includes(collection.key!) ? t('Ocultar abas') : t('Ver abas') }}<ChevronDown :size="15" :class="{ rotated: expanded.includes(collection.key!) }" /></button><button class="restore-button" :disabled="busy || !collection.tabs.length" @click="restore(collection)">{{ t('Abrir coleção') }}<ArrowUpRight :size="15" /></button></div>
             </article>
-            <p v-if="visible.length" class="collection-end">{{ t('Tudo no seu lugar. No seu tempo.') }}</p>
+            <p v-if="visible.length" class="collection-end">{{ t('Tudo no seu lugar. No seu tempo.') }}</p></template>
           </section>
           <aside class="open-panel"><div class="open-panel-heading"><span class="live-dot"></span><h2>{{ t('Abas abertas') }}</h2><span class="count-pill">{{ openTabs.length }}</span></div><p class="panel-description">{{ t('Sua janela atual, pronta para guardar.') }}</p><div v-if="openTabs.length" class="selection-toolbar"><span>{{ t('Selecionadas: {count}', { count: selectedTabs.length }) }}</span><button class="text-button" @click="excludedTabs = selectedTabs.length === openTabs.length ? openTabs.map(tab => tab.id!) : []">{{ selectedTabs.length === openTabs.length ? t('Desmarcar todas') : t('Selecionar todas') }}</button></div><div class="open-tab-list"><div v-for="tab in openTabs" :key="tab.id" class="open-tab"><input type="checkbox" :checked="!excludedTabs.includes(tab.id!)" :aria-label="t('Selecionar {title}', { title: tab.title })" @change="selectTab(tab)" /><SiteIcon :url="tab.url" /><button class="tab-name" @click="openTab(tab.url)"><strong>{{ tab.title }}</strong><small>{{ domain(tab.url) }}</small></button><button class="icon-button close-tab" :aria-label="t('Fechar aba {title}', { title: tab.title })" @click="closeTab(tab)"><X :size="15" /></button></div><div v-if="!openTabs.length" class="open-empty"><Check :size="24" /><strong>{{ t('Tudo tranquilo por aqui') }}</strong><p>{{ t('As abas desta janela aparecerão aqui.') }}</p></div></div><div class="save-area"><label class="field-label" for="save-destination">{{ t('Salvar em') }}</label><CollectionPicker id="save-destination" v-model="saveDestination" :collections="collections" :t="t" :label="t('Salvar em')" allow-new :disabled="busy" /><label class="option-check"><input v-model="ignoreDuplicates" type="checkbox" :disabled="busy" />{{ t('Ignorar abas duplicadas') }}</label><p v-if="duplicateCount" class="duplicate-hint">{{ t('Duplicadas: {count}', { count: duplicateCount }) }}</p><label class="option-check"><input v-model="closeAfterSave" type="checkbox" :disabled="busy" />{{ t('Fechar abas após salvar') }}</label><button class="button primary" :disabled="!selectedTabs.length || busy" @click="saveTabs"><ArrowDownToLine :size="18" />{{ busy ? t('Salvando…') : t(selectedTabs.length === 1 ? 'Salvar {count} aba' : 'Salvar {count} abas', { count: selectedTabs.length }) }}</button><p>{{ closeAfterSave ? t('As abas selecionadas serão salvas e fechadas.') : t('As abas selecionadas continuarão abertas.') }}<br>{{ t('Esta página continua aberta.') }}</p></div><div class="tip"><Leaf :size="18" /><p><strong>{{ t('Respire. Suas abas estão guardadas.') }}</strong><br>{{ t('Reabra uma coleção quando precisar.') }}</p></div></aside>
         </div>

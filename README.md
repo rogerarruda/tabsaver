@@ -91,7 +91,7 @@ Na barra acima das coleções:
   Desfazer também substitui alterações feitas desde aquela restauração.
 
 O formato contém `app: "tabsaver"`, `version: 1`, `exportedAt`, `collections` e
-`preferences`. Arquivos inválidos e versões desconhecidas são recusados antes de
+`preferences` e, nos novos arquivos, `trash`. Arquivos inválidos e versões desconhecidas são recusados antes de
 qualquer alteração. A cópia de recuperação usa a chave `backupRecovery` e não
 entra no arquivo exportado. A gravação no Chrome atualiza os dados e a cópia em
 uma única chamada de armazenamento, sem novas permissões.
@@ -147,9 +147,9 @@ override, cuja configuração é controlada pelo Chrome e pelo manifesto.
 - A estrela marca favoritos, que aparecem primeiro; o filtro **Favoritos** mostra
   somente essas coleções. O lápis permite editar nome e etiquetas separadas por
   vírgula. A busca também procura nas etiquetas.
-- **Desfazer exclusão** recupera a última coleção excluída, inclusive após recarregar.
-  Uma nova exclusão substitui essa cópia. Restaurar um backup limpa essa opção para
-  evitar misturar uma exclusão anterior com os dados importados.
+- A **Lixeira** guarda coleções e abas removidas, inclusive após recarregar. Cada
+  item pode ser restaurado ou excluído definitivamente; também é possível esvaziá-la.
+  A antiga cópia da última exclusão é migrada para a lixeira no primeiro carregamento.
 - O lembrete de backup compara os dados com a última exportação preparada. É possível
   adiar até amanhã. O navegador inicia o download; o TabSaver não confirma se o usuário
   efetivamente guardou o arquivo. A indicação usa “Última exportação preparada”.
@@ -172,3 +172,24 @@ interface e os limites de verificação. As capturas usam somente dados fictíci
 
 Referências das APIs: https://developer.chrome.com/docs/extensions/how-to/ui/favicons
  e https://developer.chrome.com/docs/extensions/reference/api/contextMenus
+
+
+## Navegação e proteção de ações
+
+- **Ver/Ocultar abas** fica no topo e no rodapé da coleção.
+- Arraste uma aba pela alça para um cartão de coleção ou para uma coleção na barra
+  lateral. O destino é destacado. **Mover para** continua disponível como alternativa
+  por teclado e em telas de toque.
+- **Salvar em** oferece busca por nome/etiqueta e uma lista com rolagem limitada,
+  ordenada da coleção mais recente para a mais antiga, sem priorizar favoritos.
+- Fechar uma aba pelo X, salvar e fechar uma seleção e mover itens para a lixeira
+  exigem confirmação em um modal. Cancelar não modifica os dados.
+- Abrir **10 ou mais abas novas** exige confirmação sobre uso de memória. Abas já
+  abertas e duplicadas não entram nessa contagem; a abertura acontece em segundo plano.
+- A lixeira é local e não expira automaticamente. A restauração de uma aba tenta
+  encontrar sua coleção original. Se ela não existir ou for ambígua, recria um
+  recipiente com a aba removida, preservando os metadados disponíveis.
+- A remoção de um item da lixeira e **Esvaziar lixeira** exigem confirmação. Arquivos
+  de backup anteriores continuam podendo conter os dados que foram removidos depois.
+- Backups novos incluem a lixeira. Os antigos continuam aceitos e não apagam a
+  lixeira atual quando ela não está presente no arquivo.

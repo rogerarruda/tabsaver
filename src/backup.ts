@@ -1,14 +1,16 @@
 import { readCollections } from './collections'
+import { readTrash } from './trash'
+import type { TrashEntry } from './trash'
 
 export type BackupPreferences = { language: 'auto' | 'pt-BR' | 'en'; theme: 'system' | 'light' | 'dark' }
-export type Snapshot = { collections: unknown[]; preferences: BackupPreferences }
+export type Snapshot = { collections: unknown[]; preferences: BackupPreferences; trash?: TrashEntry[] }
 export type Backup = Snapshot & { app: 'tabsaver'; version: 1; exportedAt: string }
 const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v)
 export function validateSnapshot(input: unknown): Snapshot {
   if (!object(input) || !Array.isArray(input.collections) || !object(input.preferences)) throw new Error('invalid')
   const p = input.preferences
   if (typeof p.language !== 'string' || typeof p.theme !== 'string' || !['auto', 'pt-BR', 'en'].includes(p.language) || !['system', 'light', 'dark'].includes(p.theme)) throw new Error('invalid')
-  return { collections: input.collections, preferences: { language: p.language as BackupPreferences['language'], theme: p.theme as BackupPreferences['theme'] } }
+  return { collections: input.collections, preferences: { language: p.language as BackupPreferences['language'], theme: p.theme as BackupPreferences['theme'] }, ...(input.trash !== undefined ? { trash: readTrash(input.trash) } : {}) }
 }
 export function createBackup(snapshot: Snapshot): Backup {
   return { ...validateSnapshot(snapshot), app: 'tabsaver', version: 1, exportedAt: new Date().toISOString() }
@@ -37,15 +39,16 @@ const extension = () => typeof chrome !== 'undefined' && !!chrome.storage?.local
 const defaults: BackupPreferences = { language: 'auto', theme: 'system' }
 export async function readBackupStorage(): Promise<Snapshot & { backupRecovery?: Snapshot | null }> {
   if (extension()) {
-    const data = await chrome.storage.local.get({ collections: [], preferences: defaults, backupRecovery: null })
+    const data = await chrome.storage.local.get({ collections: [], preferences: defaults, trash: [], backupRecovery: null })
     return { ...validateSnapshot(data), backupRecovery: data.backupRecovery }
   }
-  return { ...validateSnapshot({ collections: JSON.parse(localStorage.getItem('tabsaver-preview') || '[]'), preferences: JSON.parse(localStorage.getItem('tabsaver-preferences') || JSON.stringify(defaults)) }), backupRecovery: JSON.parse(localStorage.getItem('tabsaver-recovery') || 'null') }
+  return { ...validateSnapshot({ collections: JSON.parse(localStorage.getItem('tabsaver-preview') || '[]'), preferences: JSON.parse(localStorage.getItem('tabsaver-preferences') || JSON.stringify(defaults)), trash: JSON.parse(localStorage.getItem('tabsaver-trash') || '[]') }), backupRecovery: JSON.parse(localStorage.getItem('tabsaver-recovery') || 'null') }
 }
 export async function writeBackupStorage(snapshot: Snapshot, recovery: Snapshot | null) {
   const valid = validateSnapshot(snapshot)
   if (extension()) { await chrome.storage.local.set({ ...valid, backupRecovery: recovery, lastDeleted: null }); return }
   const values = { 'tabsaver-preview': JSON.stringify(valid.collections), 'tabsaver-preferences': JSON.stringify(valid.preferences), 'tabsaver-recovery': JSON.stringify(recovery), 'tabsaver-lastDeleted': 'null' }
+  if (valid.trash !== undefined) Object.assign(values, { 'tabsaver-trash': JSON.stringify(valid.trash) })
   const before = Object.keys(values).map(key => [key, localStorage.getItem(key)] as const)
   try { for (const [key, value] of Object.entries(values)) localStorage.setItem(key, value) }
   catch (error) { for (const [key, value] of before) { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value) } throw error }

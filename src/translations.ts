@@ -1,5 +1,38 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  "Os itens serão removidos da lixeira e não poderão ser restaurados por ela.": "Items will be removed from trash and can no longer be restored from it.",
+
+  "Abas a salvar e fechar: {count}. A página do TabSaver continua aberta.": "Tabs to save and close: {count}. The TabSaver page stays open.",
+
+  "Itens na lixeira:": "Items in trash:",
+
+  "Lixeira": "Trash",
+  "Os itens ficam aqui até você restaurar ou excluir definitivamente.": "Items stay here until you restore or permanently delete them.",
+  "Esvaziar lixeira": "Empty trash",
+  "A lixeira está vazia.": "Trash is empty.",
+  "Coleção": "Collection",
+  "Aba": "Tab",
+  "Restaurar": "Restore",
+  "Excluir definitivamente": "Delete permanently",
+  "Abas restauradas voltam à coleção original quando ela é encontrada. Caso contrário, uma coleção é recriada.": "Restored tabs return to the original collection when it can be found. Otherwise, a collection is recreated.",
+  "Não foi possível carregar a lixeira. Recarregue para tentar novamente.": "Could not load trash. Reload to try again.",
+  "Item restaurado.": "Item restored.",
+  "Não foi possível restaurar o item. Os dados foram preservados.": "Could not restore the item. Your data was preserved.",
+  "Excluir definitivamente?": "Delete permanently?",
+  "Esvaziar a lixeira?": "Empty trash?",
+  "Esta ação não pode ser desfeita. Os itens serão removidos permanentemente deste navegador.": "This cannot be undone. The items will be permanently removed from this browser.",
+  "Lixeira atualizada.": "Trash updated.",
+  "Não foi possível atualizar a lixeira.": "Could not update trash.",
+  "Mover coleção para a lixeira?": "Move collection to trash?",
+  "A coleção “{name}” contém {count} abas. Você poderá restaurá-la na lixeira.": "The collection “{name}” contains {count} tabs. You can restore it from trash.",
+  "Mover para lixeira": "Move to trash",
+  "Coleção movida para a lixeira.": "Collection moved to trash.",
+  "Não foi possível mover para a lixeira. Os dados foram preservados.": "Could not move to trash. Your data was preserved.",
+  "Mover aba para a lixeira?": "Move tab to trash?",
+  "Aba movida para a lixeira.": "Tab moved to trash.",
+  "Há itens na lixeira.": "There are items in trash.",
+  "Ver lixeira": "View trash",
+
   "Abrir muitas abas?": "Open many tabs?",
   "Serão abertas {count} abas de “{name}”. Isso pode consumir bastante memória e deixar o computador lento. Deseja continuar?": "{count} tabs from “{name}” will be opened. This may use a lot of memory and slow down your computer. Do you want to continue?",
   "Abrir abas": "Open tabs",
