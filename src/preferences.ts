@@ -82,5 +82,5 @@ export function usePreferences(onError: (message: string) => void) {
     try { const data = await chrome.storage.local.get({ preferences: defaults }); apply(data.preferences) }
     catch { onError(t('Não foi possível carregar suas preferências.')) }
   }
-  return { language, theme, locale, t, loadPreferences }
+  return { language, theme, locale, t, loadPreferences, applyPreferences: apply, flushPreferences: () => pendingWrite }
 }

@@ -2,6 +2,9 @@
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { Layers, LayoutGrid, Search, Plus, ArrowUpRight, X, Leaf, Folder, ChevronDown, ArrowDownToLine, Pencil, Trash2, Check, HardDrive, Clock3, Languages, SunMoon } from 'lucide-vue-next'
 
+import BackupTools from './BackupTools.vue'
+import Tutorial from './Tutorial.vue'
+import type { Snapshot } from './backup'
 import { usePreferences } from './preferences'
 
 import { readCollections, writeCollections } from './collections'
@@ -13,6 +16,8 @@ const sort = ref('newest')
 const selected = ref('all')
 const expanded = ref<string[]>([])
 const dialog = ref(false)
+const backupDialog = ref(false)
+const tutorialDialog = ref(false)
 const editing = ref<Collection | null>(null)
 const name = ref('')
 const busy = ref(false)
@@ -20,7 +25,7 @@ const loading = ref(true)
 const message = ref('')
 const error = ref('')
 const storageUnavailable = ref(false)
-const { language, theme, locale, t, loadPreferences } = usePreferences(text => error.value = text)
+const { language, theme, locale, t, loadPreferences, applyPreferences, flushPreferences } = usePreferences(text => error.value = text)
 let noticeTimer: ReturnType<typeof setTimeout>
 const extension = typeof chrome !== 'undefined' && !!chrome.storage?.local && !!chrome.tabs
 const totalTabs = computed(() => collections.value.reduce((sum, c) => sum + c.tabs.length, 0))
@@ -81,6 +86,7 @@ function loadCollections(value: unknown) {
   try { collections.value = readCollections(value); storageUnavailable.value = false }
   catch { storageUnavailable.value = true; error.value = t('Não foi possível carregar suas coleções. Recarregue para tentar novamente.') }
 }
+function backupRestored(snapshot: Snapshot) { loadCollections(snapshot.collections); applyPreferences(snapshot.preferences); selected.value = 'all'; expanded.value = []; query.value = ''; error.value = '' }
 function storageChanged(changes: { [key: string]: chrome.storage.StorageChange }, area: string) { if (area === 'local' && changes.collections) loadCollections(changes.collections.newValue ?? []) }
 onMounted(async () => {
   await loadPreferences()
@@ -94,7 +100,7 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
 
 <template>
   <div class="app-shell">
-    <aside class="sidebar" :inert="dialog || undefined">
+    <aside class="sidebar" :inert="dialog || backupDialog || tutorialDialog || undefined">
       <a class="brand" href="#" @click.prevent="selected = 'all'"><span class="brand-icon"><Layers :size="23" /></span>TabSaver<span class="brand-dot">.</span></a>
       <div class="workspace-label">{{ t('SEU ESPAÇO') }}</div>
       <button class="nav-item" :class="{ active: selected === 'all' }" @click="selected = 'all'"><LayoutGrid :size="18" /> {{ t('Todas as coleções') }} <span class="nav-count">{{ collections.length }}</span></button>
@@ -107,14 +113,15 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
       <div class="sidebar-footer"><span>{{ t('Menos abas. Mais espaço.') }}</span><Leaf :size="15" /></div>
     </aside>
 
-    <main :inert="dialog || undefined">
-      <header class="topbar"><span class="breadcrumb">{{ t('Meu espaço') }} <span>/</span> <strong>{{ t('Coleções') }}</strong></span><div class="topbar-controls"><span class="local-badge"><span class="status-dot"></span> {{ t('Armazenamento local') }}</span><div class="preferences"><label class="preference-control"><Languages :size="15" /><span class="sr-only">{{ t('Idioma') }}</span><select v-model="language" :aria-label="t('Idioma')"><option value="auto">{{ t('Automático') }}</option><option value="pt-BR">Português (BR)</option><option value="en">English</option></select><ChevronDown :size="12" /></label><label class="preference-control"><SunMoon :size="15" /><span class="sr-only">{{ t('Aparência') }}</span><select v-model="theme" :aria-label="t('Aparência')"><option value="system">{{ t('Sistema') }}</option><option value="light">{{ t('Claro') }}</option><option value="dark">{{ t('Escuro') }}</option></select><ChevronDown :size="12" /></label></div></div></header>
+    <main :inert="dialog || backupDialog || tutorialDialog || undefined">
+      <header class="topbar"><span class="breadcrumb">{{ t('Meu espaço') }} <span>/</span> <strong>{{ t('Coleções') }}</strong></span><div class="topbar-controls"><span class="local-badge"><span class="status-dot"></span> {{ t('Armazenamento local') }}</span><div class="preferences"><label class="preference-control"><Languages :size="15" /><span class="sr-only">{{ t('Idioma') }}</span><select v-model="language" :aria-label="t('Idioma')"><option value="auto">{{ t('Automático') }}</option><option value="pt-BR">Português (BR)</option><option value="en">English</option></select><ChevronDown :size="12" /></label><label class="preference-control"><SunMoon :size="15" /><span class="sr-only">{{ t('Aparência') }}</span><select v-model="theme" :aria-label="t('Aparência')"><option value="system">{{ t('Sistema') }}</option><option value="light">{{ t('Claro') }}</option><option value="dark">{{ t('Escuro') }}</option></select><ChevronDown :size="12" /></label></div><Tutorial :t="t" @modal="tutorialDialog = $event" @notice="notify" /></div></header>
       <div class="page-content">
         <section class="page-heading"><div><p class="eyebrow">{{ t('ORGANIZE AGORA. CONTINUE DEPOIS.') }}</p><h1>{{ t('Espaço para o que importa') }}<span>.</span></h1><p class="subtitle">{{ t('Guarde suas abas, libere seu navegador e retome de onde parou.') }}</p></div><button class="button primary" @click="startEdit()"><Plus :size="18" /> {{ t('Nova coleção') }}</button></section>
         <div v-if="error" class="error-banner" role="alert"><span>{{ error }}</span><button class="icon-button" :aria-label="t('Dispensar erro')" @click="error = ''"><X :size="18" /></button></div>
         <div v-if="collections.some(c => c.unreadableTabs)" class="preview-note" role="status">{{ t('Algumas abas antigas não puderam ser exibidas. Os dados originais foram preservados.') }}</div>
         <div v-if="!extension" class="preview-note">{{ t('Prévia da interface · Abra a extensão no Chrome para gerenciar as abas do navegador.') }}</div>
         <section class="overview" :aria-label="t('Resumo')"><div><span class="stat-icon mint"><Layers :size="21" /></span><div><strong>{{ totalTabs }}</strong><span>{{ t('abas guardadas') }}</span></div></div><div><span class="stat-icon lavender"><Folder :size="21" /></span><div><strong>{{ collections.length }}</strong><span>{{ t('coleções criadas') }}</span></div></div><div><span class="stat-icon sand"><LayoutGrid :size="21" /></span><div><strong>{{ openTabs.length }}</strong><span>{{ t('abas abertas agora') }}</span></div></div><p><Leaf :size="19" /><span>{{ t('Um navegador mais leve.') }}<br><strong>{{ t('Uma mente mais livre.') }}</strong></span></p></section>
+        <BackupTools :t="t" :locale="locale" :flush-preferences="flushPreferences" @restored="backupRestored" @notice="notify" @modal="backupDialog = $event" />
         <div class="content-layout">
           <section class="collections-section">
             <div class="section-heading"><h2>{{ heading }} <span>{{ visible.length }}</span></h2><label class="sort-label"><span class="sr-only">{{ t('Ordenar coleções') }}</span><select v-model="sort"><option value="newest">{{ t('Mais recentes') }}</option><option value="oldest">{{ t('Mais antigas') }}</option><option value="name">{{ t('Nome A–Z') }}</option></select><ChevronDown :size="14" /></label></div>

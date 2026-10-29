@@ -8,6 +8,12 @@
     "48": "images/extension_48.png"
   },
   "permissions": ["tabs", "storage"],
+  "action": {
+    "default_title": "Abrir TabSaver"
+  },
+  "background": {
+    "service_worker": "src/background.ts"
+  },
   "chrome_url_overrides": {
     "newtab": "src/index.html"
   },

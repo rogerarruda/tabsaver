@@ -1,0 +1,37 @@
+{
+  "contract": "Tutorial inicial de cinco passos no primeiro uso, reabertura no botão Como usar, configuração de nova aba, salvar/coleções, backup, idioma/tema. Tutorial não altera configurações de outras extensões.",
+  "targetViewports": [
+    "1440x900",
+    "390x844"
+  ],
+  "checks": {
+    "firstUse": "Aberto automaticamente sem tutorialSeen; fundo inert e foco no título.",
+    "steps": "Cinco títulos conferidos ao avançar; concluir gravou tutorialSeen e retornou foco ao botão.",
+    "reopen": "Botão reabre no passo 1; voltar retorna à etapa anterior; Escape fecha.",
+    "persistence": "Após concluir e recarregar, permaneceu fechado. Ver depois também grava flag.",
+    "storageFailure": "Falha simulada de gravação exibiu aviso e liberou a interface.",
+    "keyboard": "Tab no último botão retorna ao primeiro controle visível. Ajuda recolhível inclui summary na navegação.",
+    "languages": "PT-BR e English conferidos; temas claro e escuro renderizados.",
+    "responsive": "1440x900 e 390x844 sem overflow horizontal. Ajuda de configuração pode ser expandida, com rolagem interna quando necessário."
+  },
+  "build": "npm run build passou; 9 testes existentes passaram.",
+  "limits": [
+    "Botão chrome://extensions e controle da nova aba não exercitados em instalação real; manifesto mantém override existente.",
+    "Leitor de tela e auditoria completa de contraste não executados."
+  ],
+  "sources": [
+    "https://developer.chrome.com/docs/extensions/develop/ui/override-chrome-pages"
+  ],
+  "renderedEvidence": [
+    {
+      "viewport": "1440x900",
+      "artifact": "tutorial-desktop.png",
+      "observation": "Primeira etapa, PT-BR e tema claro."
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "tutorial-mobile.png",
+      "observation": "Primeira etapa, English e tema escuro, botões visíveis sem rolagem."
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "contract": "Backup JSON local com coleções originais e preferências; restauração com prévia, adicionar ou substituir, preferências opcionais, cópia para desfazer; PT-BR/en e temas claro/escuro. Nenhuma permissão nova ou alteração nas abas abertas.",
+  "targetViewports": [
+    "1440x900",
+    "390x844"
+  ],
+  "checks": {
+    "export": "Conteúdo do Blob e nome do arquivo verificados no navegador; formato versão 1 e preservação de abas legadas; cópia de recuperação não exportada.",
+    "import": "File e DataTransfer acionaram o input real da interface: prévia antes de gravar e gravação após confirmar.",
+    "invalid": "JSON inválido recusado sem abrir diálogo nem alterar coleções.",
+    "merge": "Coleção em formato de objeto restaurada e formato original preservado. Deduplicação coberta por teste.",
+    "replace": "Substituição com preferências ativadas alterou idioma para en e tema para dark.",
+    "undo": "Botão disponível após recarregar; recuperou estado vazio anterior e removeu cópia de recuperação.",
+    "accessibility": "Foco inicial no fechar, conteúdo de fundo inert, labels e contenção de foco implementados; foco retorna ao botão Restaurar ao fechar.",
+    "responsive": "Inspeção visual de 1440x900 escuro e 390x844 claro, sem overflow horizontal em largura estreita."
+  },
+  "tests": "9 testes passaram; incluem formatos antigos, round trip, arquivos inválidos, deduplicação, gravação Chrome simulada, desfazer e falha de armazenamento.",
+  "limitations": [
+    "Não executado na extensão instalada no Chrome; API Chrome coberta por simulação e interface pela prévia isolada.",
+    "Auditoria completa de contraste e leitor de tela não realizada."
+  ],
+  "renderedEvidence": [
+    {
+      "viewport": "1440x900",
+      "artifact": "backup-desktop.png",
+      "observation": "Barra de backup no tema escuro em inglês."
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "backup-mobile.png",
+      "observation": "Prévia de restauração em inglês no tema claro, com modos, checkbox e confirmação."
+    }
+  ]
+}
