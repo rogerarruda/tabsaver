@@ -1,5 +1,8 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  "Arrastar {title}": "Drag {title}",
+  "Arraste pela alça para outra coleção ou use Mover para.": "Drag the handle onto another collection or use Move to.",
+
   "Buscar coleção": "Search collections",
   "Mais recentes primeiro": "Newest first",
   "Nenhuma coleção encontrada.": "No collections found.",

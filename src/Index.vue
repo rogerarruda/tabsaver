@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
-import { Layers, LayoutGrid, Search, Plus, ArrowUpRight, X, Leaf, Folder, ChevronDown, ArrowDownToLine, Pencil, Trash2, Check, HardDrive, Clock3, Languages, SunMoon, Star } from 'lucide-vue-next'
+import { Layers, LayoutGrid, Search, Plus, ArrowUpRight, X, Leaf, Folder, ChevronDown, ArrowDownToLine, Pencil, Trash2, Check, HardDrive, Clock3, Languages, SunMoon, Star, GripVertical } from 'lucide-vue-next'
 
 import BackupTools from './BackupTools.vue'
 import Tutorial from './Tutorial.vue'
@@ -15,6 +15,8 @@ import { readCollections, writeCollections, appendTabs, replaceTabs, moveSavedTa
 import type { Tab, Collection } from './collections'
 const openTabs = ref<Tab[]>([])
 const saveDestination = ref('new')
+const dragged = ref<{ source: string; index: number; url: string } | null>(null)
+const dropOver = ref('')
 const excludedTabs = ref<number[]>([])
 const closeAfterSave = ref(true)
 const ignoreDuplicates = ref(true)
@@ -139,6 +141,26 @@ async function deleteSavedTab(collection: Collection, index: number) {
   try { await persist(collections.value.map(c => c.key === collection.key ? replaceTabs(c, c.tabs.filter((_, i) => i !== index)) : c), true); notify(t('Aba removida da coleção.')) }
   catch { error.value = t('Não foi possível editar esta coleção. Os dados foram preservados.') } finally { busy.value = false }
 }
+function beginDrag(collection: Collection, index: number, event: DragEvent) {
+  if (busy.value || collection.unreadableTabs || !event.dataTransfer) { event.preventDefault(); return }
+  dragged.value = { source: collection.key!, index, url: collection.tabs[index].url }
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('text/plain', collection.tabs[index].url)
+}
+function endDrag() { dragged.value = null; dropOver.value = '' }
+function allowDrop(collection: Collection, event: DragEvent) {
+  if (!dragged.value || busy.value || collection.unreadableTabs || dragged.value.source === collection.key) return
+  event.preventDefault(); dropOver.value = collection.key!; if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+}
+async function dropTab(collection: Collection) {
+  const item = dragged.value
+  endDrag()
+  if (!item || busy.value || collection.key === item.source || collection.unreadableTabs) return
+  if (collections.value.find(c => c.key === item.source)?.tabs[item.index]?.url !== item.url) return
+  busy.value = true
+  try { await persist(moveSavedTab(collections.value, item.source, collection.key!, item.index), true); notify(t('Aba movida.')) }
+  catch { error.value = t('Não foi possível editar esta coleção. Os dados foram preservados.') } finally { busy.value = false }
+}
 async function moveTab(collection: Collection, index: number, event: Event) {
   const input = event.target as HTMLSelectElement, destination = input.value
   input.value = ''
@@ -156,7 +178,7 @@ async function addTab(collection: Collection, event: Event) {
 }
 function toggle(date: string) { expanded.value = expanded.value.includes(date) ? expanded.value.filter(d => d !== date) : [...expanded.value, date] }
 function loadCollections(value: unknown) {
-  try { collections.value = readCollections(value); storageUnavailable.value = false; saveDestination.value = 'new' }
+  try { collections.value = readCollections(value); storageUnavailable.value = false; endDrag(); saveDestination.value = 'new' }
   catch { storageUnavailable.value = true; error.value = t('Não foi possível carregar suas coleções. Recarregue para tentar novamente.') }
 }
 function backupRestored(snapshot: Snapshot) { loadCollections(snapshot.collections); applyPreferences(snapshot.preferences); selected.value = 'all'; expanded.value = []; query.value = ''; error.value = ''; lastDeleted.value = null }
@@ -179,7 +201,7 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
       <button class="nav-item" :class="{ active: selected === 'all' }" @click="selected = 'all'"><LayoutGrid :size="18" /> {{ t('Todas as coleções') }} <span class="nav-count">{{ collections.length }}</span></button>
       <button class="nav-item" :class="{ active: selected === 'favorites' }" @click="selected = 'favorites'"><Star :size="18" />{{ t('Favoritos') }}<span class="nav-count">{{ collections.filter(c => c.favorite).length }}</span></button><div class="sidebar-section"><span>{{ t('COLEÇÕES') }}</span><button class="icon-button" :aria-label="t('Criar coleção')" @click="startEdit()"><Plus :size="17" /></button></div>
       <nav class="collection-nav" :aria-label="t('Coleções')">
-        <button v-for="collection in [...collections].sort((a,b) => b.date.localeCompare(a.date))" :key="collection.key" class="nav-item" :class="{ active: selected === collection.key }" @click="selected = collection.key!"><Folder :size="17" /><span class="nav-name">{{ collection.name }}</span><span class="nav-count">{{ collection.tabs.length }}</span></button>
+        <button v-for="collection in [...collections].sort((a,b) => b.date.localeCompare(a.date))" :key="collection.key" class="nav-item" :class="{ active: selected === collection.key, 'drop-over': dropOver === collection.key }" @dragover="allowDrop(collection, $event)" @dragleave="dropOver = ''" @drop.prevent="dropTab(collection)" @click="selected = collection.key!"><Folder :size="17" /><span class="nav-name">{{ collection.name }}</span><span class="nav-count">{{ collection.tabs.length }}</span></button>
         <p v-if="!collections.length" class="sidebar-empty">{{ t('Um lugar para cada ideia.') }}<br>{{ t('Crie sua primeira coleção.') }}</p>
       </nav>
       <div class="local-note"><span class="local-icon"><HardDrive :size="18" /></span><div><strong>{{ t('Salvo neste navegador') }}</strong><p>{{ t('Suas abas ficam no seu dispositivo.') }}</p></div><span class="status-dot"></span></div>
@@ -201,11 +223,11 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
             <div class="filter-bar"><button class="text-button" @click="selected = selected === 'favorites' ? 'all' : 'favorites'"><Star :size="14" />{{ selected === 'favorites' ? t('Todas as coleções') : t('Favoritos') }}</button></div><label class="search-field"><Search :size="18" /><input v-model="query" :placeholder="t('Buscar coleções ou abas…')" :aria-label="t('Buscar coleções ou abas')" /><button v-if="query" class="icon-button" :aria-label="t('Limpar busca')" @click="query = ''"><X :size="16" /></button></label>
             <div v-if="loading" class="empty-state" role="status">{{ t('Carregando suas coleções…') }}</div>
             <div v-else-if="!visible.length" class="empty-state"><span class="empty-icon"><component :is="query ? Search : Layers" :size="30" /></span><h3>{{ query ? t('Nenhum resultado por aqui') : t('Suas próximas ideias moram aqui') }}</h3><p>{{ query ? t('Tente outro nome, site ou palavra-chave.') : t('Salve as abas abertas ou crie uma coleção para começar a organizar seu espaço.') }}</p><button class="button" @click="query ? query = '' : startEdit()"><Plus v-if="!query" :size="17" />{{ query ? t('Limpar busca') : t('Criar primeira coleção') }}</button></div>
-            <article v-for="(collection, index) in visible" :key="collection.key" class="collection-card">
+            <article v-for="(collection, index) in visible" :key="collection.key" class="collection-card" :class="{ 'drop-target': dragged && dragged.source !== collection.key && !collection.unreadableTabs, 'drop-over': dropOver === collection.key }" @dragover="allowDrop(collection, $event)" @dragleave.self="dropOver = ''" @drop.prevent="dropTab(collection)">
               <div class="card-top"><span class="folder-tile" :class="['mint','lavender','sand'][index % 3]"><Folder :size="22" /></span><div class="card-title"><h3>{{ collection.name }}</h3><p><Clock3 :size="12" />{{ dateLabel(collection.date) }}<span>·</span>{{ collection.tabs.length }} {{ collection.tabs.length === 1 ? t('aba') : t('abas') }}</p></div><button class="text-button card-collapse" :aria-expanded="expanded.includes(collection.key!)" @click="toggle(collection.key!)">{{ expanded.includes(collection.key!) ? t('Ocultar abas') : t('Ver abas') }}<ChevronDown :size="14" :class="{ rotated: expanded.includes(collection.key!) }" /></button><button class="icon-button favorite-button" :class="{ starred: collection.favorite }" :aria-label="collection.favorite ? t('Remover dos favoritos') : t('Adicionar aos favoritos')" :aria-pressed="!!collection.favorite" :disabled="busy" @click="favorite(collection)"><Star :size="16" :fill="collection.favorite ? 'currentColor' : 'none'" /></button><button class="icon-button" :aria-label="t('Renomear coleção')" @click="startEdit(collection)"><Pencil :size="16" /></button><button class="icon-button delete-button" :aria-label="t('Excluir coleção')" @click="remove(collection)"><Trash2 :size="16" /></button></div>
               <details v-if="collection.unreadableTabs" class="legacy-note"><summary>{{ t('Dados antigos: algumas abas não puderam ser lidas') }}</summary><p>{{ t('Apenas as abas reconhecidas são exibidas. O conteúdo original continua salvo; a edição de abas desta coleção está bloqueada para evitar perda de dados.') }}</p><p>{{ t('Use Exportar backup para guardar uma cópia completa antes de corrigir o formato ou pedir ajuda.') }}</p><button class="text-button" @click="copyOriginal(collection)">{{ t('Copiar dados originais') }}</button><pre tabindex="0" :aria-label="t('Dados originais')">{{ JSON.stringify(collection.source, null, 2) }}</pre></details><div v-if="collection.tags?.length" class="tag-list"><button v-for="tag in collection.tags" :key="tag" class="tag-chip" @click="query = tag">#{{ tag }}</button></div><div class="tab-preview" v-if="collection.tabs.length"><span v-for="tab in collection.tabs.slice(0, 3)" :key="tab.url" class="domain-chip"><SiteIcon :url="tab.url" compact />{{ domain(tab.url) }}</span><span v-if="collection.tabs.length > 3" class="extra-tabs">+{{ collection.tabs.length - 3 }}</span></div>
               <p v-else class="empty-collection">{{ t('Esta coleção ainda não tem abas.') }}</p>
-              <div v-if="expanded.includes(collection.key!)" class="saved-tab-list"><div v-for="(tab, tabIndex) in collection.tabs" :key="tabIndex" class="saved-tab"><a class="saved-tab-link" :href="tab.url" @click.prevent="openTab(tab.url)"><SiteIcon :url="tab.url" /><span class="saved-tab-info"><strong>{{ tab.title }}</strong><small>{{ domain(tab.url) }}</small></span><ArrowUpRight :size="16" /></a><select class="move-select" :aria-label="t('Mover {title}', { title: tab.title })" :disabled="busy || collection.unreadableTabs" value="" @change="moveTab(collection, tabIndex, $event)"><option value="">{{ t('Mover para…') }}</option><option v-for="target in collections.filter(c => c.key !== collection.key && !c.unreadableTabs)" :key="target.key" :value="target.key">{{ target.name }}</option></select><button class="icon-button delete-button" :aria-label="t('Remover {title}', { title: tab.title })" :disabled="busy || collection.unreadableTabs" @click="deleteSavedTab(collection, tabIndex)"><X :size="15" /></button></div><form v-if="!collection.unreadableTabs" class="add-tab-form" @submit.prevent="addTab(collection, $event)"><input name="title" :placeholder="t('Título (opcional)')" :aria-label="t('Título (opcional)')" maxlength="500" /><input name="url" type="url" placeholder="https://…" :aria-label="t('Endereço da aba')" required /><button class="button" :disabled="busy"><Plus :size="15" />{{ t('Adicionar aba') }}</button></form></div>
+              <div v-if="expanded.includes(collection.key!)" class="saved-tab-list"><p class="drag-hint">{{ t('Arraste pela alça para outra coleção ou use Mover para.') }}</p><div v-for="(tab, tabIndex) in collection.tabs" :key="tabIndex" class="saved-tab"><button class="icon-button drag-handle" type="button" :draggable="!busy && !collection.unreadableTabs" :disabled="busy || collection.unreadableTabs" :aria-label="t('Arrastar {title}', { title: tab.title })" @dragstart="beginDrag(collection, tabIndex, $event)" @dragend="endDrag"><GripVertical :size="16" /></button><a class="saved-tab-link" :href="tab.url" @click.prevent="openTab(tab.url)"><SiteIcon :url="tab.url" /><span class="saved-tab-info"><strong>{{ tab.title }}</strong><small>{{ domain(tab.url) }}</small></span><ArrowUpRight :size="16" /></a><select class="move-select" :aria-label="t('Mover {title}', { title: tab.title })" :disabled="busy || collection.unreadableTabs" value="" @change="moveTab(collection, tabIndex, $event)"><option value="">{{ t('Mover para…') }}</option><option v-for="target in collections.filter(c => c.key !== collection.key && !c.unreadableTabs)" :key="target.key" :value="target.key">{{ target.name }}</option></select><button class="icon-button delete-button" :aria-label="t('Remover {title}', { title: tab.title })" :disabled="busy || collection.unreadableTabs" @click="deleteSavedTab(collection, tabIndex)"><X :size="15" /></button></div><form v-if="!collection.unreadableTabs" class="add-tab-form" @submit.prevent="addTab(collection, $event)"><input name="title" :placeholder="t('Título (opcional)')" :aria-label="t('Título (opcional)')" maxlength="500" /><input name="url" type="url" placeholder="https://…" :aria-label="t('Endereço da aba')" required /><button class="button" :disabled="busy"><Plus :size="15" />{{ t('Adicionar aba') }}</button></form></div>
               <div class="card-footer"><button class="text-button" :aria-expanded="expanded.includes(collection.key!)" @click="toggle(collection.key!)">{{ expanded.includes(collection.key!) ? t('Ocultar abas') : t('Ver abas') }}<ChevronDown :size="15" :class="{ rotated: expanded.includes(collection.key!) }" /></button><button class="restore-button" :disabled="busy || !collection.tabs.length" @click="restore(collection)">{{ t('Abrir coleção') }}<ArrowUpRight :size="15" /></button></div>
             </article>
             <p v-if="visible.length" class="collection-end">{{ t('Tudo no seu lugar. No seu tempo.') }}</p>
