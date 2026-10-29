@@ -1,0 +1,17 @@
+{
+  "feature": "Quick save and configurable Chrome keyboard shortcuts",
+  "screenshots": [
+    { "file": "quick-save-desktop.png", "viewport": "1440x900", "theme": "light" },
+    { "file": "quick-save-mobile-dark.png", "viewport": "390x844", "theme": "dark", "horizontalOverflow": false }
+  ],
+  "verification": [
+    "26 automated tests passed, including production background command routing",
+    "Quick save considers all three mocked tabs despite partial selection",
+    "Cancel leaves storage, open tabs and panel choices unchanged",
+    "Confirm saves a new collection before closing the captured tabs",
+    "Quick-save URL request opens confirmation and consumes its fragment",
+    "Shortcut dialog displays actual mocked assignments and opens Chrome configuration",
+    "Closing shortcut dialog restores focus to its trigger"
+  ],
+  "limitations": ["Native operating-system shortcut dispatch was not exercised; command routing and UI were tested using Chrome API mocks."]
+}

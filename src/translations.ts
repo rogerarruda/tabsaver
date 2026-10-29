@@ -1,5 +1,20 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  "Salvar todas as abas em uma nova coleção?": "Save all tabs to a new collection?",
+
+  "Não há abas abertas para salvar nesta janela.": "There are no open tabs to save in this window.",
+  "No Chrome, abra chrome://extensions/shortcuts para configurar os atalhos.": "In Chrome, open chrome://extensions/shortcuts to configure shortcuts.",
+  "Salvar todas as abas desta janela em uma nova coleção. A confirmação aparece antes de fechar.": "Save all tabs in this window to a new collection. Confirmation appears before closing.",
+  "Salvar abas": "Save tabs",
+  "Atalhos": "Shortcuts",
+  "Atalhos do teclado": "Keyboard shortcuts",
+  "Os atalhos funcionam com o Chrome em foco. Você pode alterá-los nas configurações de extensões.": "Shortcuts work while Chrome is focused. You can change them in the extensions settings.",
+  "Abrir TabSaver": "Open TabSaver",
+  "Não atribuído": "Unassigned",
+  "Salvar abas rapidamente": "Quick save tabs",
+  "O salvamento rápido usa todas as abas da janela, ignora duplicatas e cria uma nova coleção. Nenhuma aba é fechada antes da confirmação.": "Quick save uses all tabs in the window, skips duplicates, and creates a new collection. No tab is closed before confirmation.",
+  "Configurar no Chrome": "Configure in Chrome",
+
   "Os itens serão removidos da lixeira e não poderão ser restaurados por ela.": "Items will be removed from trash and can no longer be restored from it.",
 
   "Abas a salvar e fechar: {count}. A página do TabSaver continua aberta.": "Tabs to save and close: {count}. The TabSaver page stays open.",

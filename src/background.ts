@@ -1,11 +1,17 @@
 import { manualTab, quickSave } from './collections'
 
-async function openPage() {
+async function openPage(quick = false, windowId?: number) {
   const page = chrome.runtime.getManifest().chrome_url_overrides?.newtab
   if (!page) throw new Error('TabSaver page is missing from the manifest')
-  await chrome.tabs.create({ url: new URL(page, chrome.runtime.getURL('/')).href })
+  const url = new URL(page, chrome.runtime.getURL('/'))
+  if (quick) url.hash = 'quick-save'
+  await chrome.tabs.create({ url: url.href, ...(windowId !== undefined ? { windowId } : {}) })
 }
 chrome.action.onClicked.addListener(() => openPage().catch(error => console.error('Could not open TabSaver:', error)))
+
+chrome.commands.onCommand.addListener((command, tab) => {
+  if (command === 'quick-save-tabs') return openPage(true, tab?.windowId).catch(error => console.error('Could not start quick save:', error))
+})
 
 async function menuLanguage() {
   const { preferences } = await chrome.storage.local.get({ preferences: { language: 'auto' } })

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
-import { Layers, LayoutGrid, Search, Plus, ArrowUpRight, X, Leaf, Folder, ChevronDown, ArrowDownToLine, Pencil, Trash2, Check, HardDrive, Clock3, Languages, SunMoon, Star, GripVertical } from 'lucide-vue-next'
+import { computed, onMounted, onBeforeUnmount, ref, watch, nextTick } from 'vue'
+import { Layers, LayoutGrid, Search, Plus, ArrowUpRight, X, Leaf, Folder, ChevronDown, ArrowDownToLine, Pencil, Trash2, Check, HardDrive, Clock3, Languages, SunMoon, Star, GripVertical, Zap, Keyboard } from 'lucide-vue-next'
 
 import BackupTools from './BackupTools.vue'
 import Tutorial from './Tutorial.vue'
@@ -37,6 +37,10 @@ const expanded = ref<string[]>([])
 const dialog = ref(false)
 const backupDialog = ref(false)
 const tutorialDialog = ref(false)
+const shortcutDialog = ref(false)
+const shortcutTrigger = ref<HTMLButtonElement | null>(null)
+const shortcutBindings = ref<Record<string, string>>({})
+const quickRequest = ref(false)
 const editing = ref<Collection | null>(null)
 const name = ref('')
 const tags = ref('')
@@ -83,11 +87,11 @@ async function submitCollection() {
     await persist(next); dialog.value = false; notify(editing.value ? t('Coleção renomeada.') : t('Coleção criada.'))
   } catch { error.value = t('Não foi possível salvar a coleção. Tente novamente.') } finally { busy.value = false }
 }
-async function saveTabs() {
-  if (!selectedTabs.value.length || busy.value) return
-  const snapshot = [...selectedTabs.value], destinationKey = saveDestination.value, shouldClose = closeAfterSave.value, skipDuplicates = ignoreDuplicates.value
+async function saveTabs(quick = false) {
+  if (!(quick ? openTabs.value : selectedTabs.value).length || busy.value) return
+  const snapshot = [...(quick ? openTabs.value : selectedTabs.value)], destinationKey = quick ? 'new' : saveDestination.value, shouldClose = quick || closeAfterSave.value, skipDuplicates = quick || ignoreDuplicates.value
   const originalDestination = collections.value.find(c => c.key === destinationKey)
-  if (shouldClose && !await requestConfirmation({ title: t('Salvar e fechar as abas selecionadas?'), body: t('Abas a salvar e fechar: {count}. A página do TabSaver continua aberta.', { count: snapshot.length }), confirmLabel: t('Salvar e fechar') })) return
+  if (shouldClose && !await requestConfirmation({ title: quick ? t('Salvar todas as abas em uma nova coleção?') : t('Salvar e fechar as abas selecionadas?'), body: t('Abas a salvar e fechar: {count}. A página do TabSaver continua aberta.', { count: snapshot.length }), confirmLabel: t('Salvar e fechar') })) return
   busy.value = true; error.value = ''
   try {
     const date = new Date()
@@ -100,6 +104,32 @@ async function saveTabs() {
     selected.value = 'all'; notify(t('Abas salvas. Tudo organizado!'))
   } catch { error.value = t('Não foi possível concluir. Confira a coleção salva antes de tentar novamente.') } finally { busy.value = false }
 }
+async function quickSaveTabs() {
+  if (busy.value || loading.value || dialog.value || backupDialog.value || tutorialDialog.value || shortcutDialog.value || confirmation.value) return
+  await refreshTabs()
+  if (!openTabs.value.length) { notify(t('Não há abas abertas para salvar nesta janela.')); return }
+  await saveTabs(true)
+}
+async function readShortcuts() {
+  if (!extension || !chrome.commands?.getAll) return
+  try { const commands = await chrome.commands.getAll(); shortcutBindings.value = Object.fromEntries(commands.map(command => [command.name || '', command.shortcut || ''])) } catch { /* The configuration link remains available. */ }
+}
+async function openShortcutHelp() { await readShortcuts(); shortcutDialog.value = true }
+async function closeShortcutHelp() { shortcutDialog.value = false; await nextTick(); shortcutTrigger.value?.focus() }
+async function configureShortcuts() {
+  try { if (extension) await chrome.tabs.create({ url: 'chrome://extensions/shortcuts' }); else notify(t('No Chrome, abra chrome://extensions/shortcuts para configurar os atalhos.')) }
+  catch { error.value = t('No Chrome, abra chrome://extensions/shortcuts para configurar os atalhos.') }
+}
+function receiveQuickRequest() {
+  if (location.hash !== '#quick-save') return
+  history.replaceState(null, '', location.pathname + location.search)
+  quickRequest.value = true
+}
+watch([quickRequest, loading, busy, dialog, backupDialog, tutorialDialog, shortcutDialog, confirmation], () => {
+  if (!quickRequest.value || loading.value || busy.value || dialog.value || backupDialog.value || tutorialDialog.value || shortcutDialog.value || confirmation.value) return
+  quickRequest.value = false
+  quickSaveTabs()
+}, { flush: 'post' })
 async function openTab(url: string, active = true): Promise<boolean> {
   try { if (extension) await chrome.tabs.create({ url, active }); else window.open(url, '_blank', 'noopener,noreferrer'); return true }
   catch { error.value = t('Não foi possível abrir esta aba.'); return false }
@@ -215,17 +245,21 @@ function backupRestored(snapshot: Snapshot) { loadCollections(snapshot.collectio
 function storageChanged(changes: { [key: string]: chrome.storage.StorageChange }, area: string) { if (area === 'local') { if (changes.collections) loadCollections(changes.collections.newValue ?? []); if (changes.trash) loadTrash(changes.trash.newValue ?? []) } }
 onMounted(async () => {
   await loadPreferences()
+  await readShortcuts()
+  window.addEventListener('hashchange', receiveQuickRequest)
+  window.addEventListener('focus', readShortcuts)
+  receiveQuickRequest()
   try {
     if (extension) { const data = await chrome.storage.local.get({ collections: [], trash: [], lastDeleted: null }); loadCollections(data.collections); loadTrash(data.trash); if (trashAvailable.value && data.lastDeleted) { const migrated = migrateLastDeleted(trash.value, data.lastDeleted); await writeAuxiliaryData({ trash: migrated, lastDeleted: null }); loadTrash(migrated) }; await refreshTabs(); chrome.tabs.onCreated.addListener(refreshTabs); chrome.tabs.onRemoved.addListener(refreshTabs); chrome.tabs.onUpdated.addListener(refreshTabs); chrome.storage.onChanged.addListener(storageChanged) }
     else { loadCollections(JSON.parse(localStorage.getItem('tabsaver-preview') || '[]')); loadTrash(JSON.parse(localStorage.getItem('tabsaver-trash') || '[]')); const previous = JSON.parse(localStorage.getItem('tabsaver-lastDeleted') || 'null'); if (trashAvailable.value && previous) { const migrated = migrateLastDeleted(trash.value, previous); await writeAuxiliaryData({ trash: migrated, lastDeleted: null }); loadTrash(migrated) } }
   } catch { storageUnavailable.value = true; error.value = t('Não foi possível carregar suas coleções. Recarregue para tentar novamente.') } finally { loading.value = false }
 })
-onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.onCreated.removeListener(refreshTabs); chrome.tabs.onRemoved.removeListener(refreshTabs); chrome.tabs.onUpdated.removeListener(refreshTabs); chrome.storage.onChanged.removeListener(storageChanged) } })
+onBeforeUnmount(() => { clearTimeout(noticeTimer); window.removeEventListener('hashchange', receiveQuickRequest); window.removeEventListener('focus', readShortcuts); if (extension) { chrome.tabs.onCreated.removeListener(refreshTabs); chrome.tabs.onRemoved.removeListener(refreshTabs); chrome.tabs.onUpdated.removeListener(refreshTabs); chrome.storage.onChanged.removeListener(storageChanged) } })
 </script>
 
 <template>
   <div class="app-shell">
-    <aside class="sidebar" :inert="dialog || backupDialog || tutorialDialog || !!confirmation || undefined">
+    <aside class="sidebar" :inert="dialog || backupDialog || tutorialDialog || shortcutDialog || !!confirmation || undefined">
       <a class="brand" href="#" @click.prevent="selected = 'all'"><img class="brand-logo" :src="brandIcon" alt="" width="37" height="37" />TabSaver<span class="brand-dot">.</span></a>
       <div class="workspace-label">{{ t('SEU ESPAÇO') }}</div>
       <button class="nav-item" :class="{ active: selected === 'all' }" @click="selected = 'all'"><LayoutGrid :size="18" /> {{ t('Todas as coleções') }} <span class="nav-count">{{ collections.length }}</span></button>
@@ -238,10 +272,10 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
       <div class="sidebar-footer"><span>{{ t('Menos abas. Mais espaço.') }}</span><Leaf :size="15" /></div>
     </aside>
 
-    <main :inert="dialog || backupDialog || tutorialDialog || !!confirmation || undefined">
+    <main :inert="dialog || backupDialog || tutorialDialog || shortcutDialog || !!confirmation || undefined">
       <header class="topbar"><span class="breadcrumb">{{ t('Meu espaço') }} <span>/</span> <strong>{{ t('Coleções') }}</strong></span><div class="topbar-controls"><span class="local-badge"><span class="status-dot"></span> {{ t('Armazenamento local') }}</span><div class="preferences"><label class="preference-control"><Languages :size="15" /><span class="sr-only">{{ t('Idioma') }}</span><select v-model="language" :aria-label="t('Idioma')"><option value="auto">{{ t('Automático') }}</option><option value="pt-BR">Português (BR)</option><option value="en">English</option></select><ChevronDown :size="12" /></label><label class="preference-control"><SunMoon :size="15" /><span class="sr-only">{{ t('Aparência') }}</span><select v-model="theme" :aria-label="t('Aparência')"><option value="system">{{ t('Sistema') }}</option><option value="light">{{ t('Claro') }}</option><option value="dark">{{ t('Escuro') }}</option></select><ChevronDown :size="12" /></label></div><Tutorial :t="t" @modal="tutorialDialog = $event" @notice="notify" /></div></header>
       <div class="page-content">
-        <section class="page-heading"><div><p class="eyebrow">{{ t('ORGANIZE AGORA. CONTINUE DEPOIS.') }}</p><h1>{{ t('Espaço para o que importa') }}<span>.</span></h1><p class="subtitle">{{ t('Guarde suas abas, libere seu navegador e retome de onde parou.') }}</p></div><button class="button primary" @click="startEdit()"><Plus :size="18" /> {{ t('Nova coleção') }}</button></section>
+        <section class="page-heading"><div><p class="eyebrow">{{ t('ORGANIZE AGORA. CONTINUE DEPOIS.') }}</p><h1>{{ t('Espaço para o que importa') }}<span>.</span></h1><p class="subtitle">{{ t('Guarde suas abas, libere seu navegador e retome de onde parou.') }}</p></div><div class="heading-actions"><div class="heading-buttons"><button class="button quick-save-button" :disabled="busy || loading || !openTabs.length" :title="t('Salvar todas as abas desta janela em uma nova coleção. A confirmação aparece antes de fechar.')" @click="quickSaveTabs"><Zap :size="17" />{{ t('Salvar abas') }}</button><button class="button primary" @click="startEdit()"><Plus :size="18" /> {{ t('Nova coleção') }}</button></div><button ref="shortcutTrigger" class="text-button shortcuts-link" @click="openShortcutHelp"><Keyboard :size="14" />{{ t('Atalhos') }}<kbd v-if="shortcutBindings['quick-save-tabs']">{{ shortcutBindings['quick-save-tabs'] }}</kbd></button></div></section>
         <div v-if="error" class="error-banner" role="alert"><span>{{ error }}</span><button class="icon-button" :aria-label="t('Dispensar erro')" @click="error = ''"><X :size="18" /></button></div>
         <div v-if="collections.some(c => c.unreadableTabs)" class="preview-note" role="status">{{ t('Algumas abas antigas não puderam ser exibidas. Os dados originais foram preservados.') }}</div>
         <div v-if="!extension" class="preview-note">{{ t('Prévia da interface · Abra a extensão no Chrome para gerenciar as abas do navegador.') }}</div>
@@ -262,12 +296,12 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); if (extension) { chrome.tabs.
             </article>
             <p v-if="visible.length" class="collection-end">{{ t('Tudo no seu lugar. No seu tempo.') }}</p></template>
           </section>
-          <aside v-if="selected !== 'trash'" class="open-panel"><div class="open-panel-heading"><span class="live-dot"></span><h2>{{ t('Abas abertas') }}</h2><span class="count-pill">{{ openTabs.length }}</span></div><p class="panel-description">{{ t('Sua janela atual, pronta para guardar.') }}</p><div v-if="openTabs.length" class="selection-toolbar"><span>{{ t('Selecionadas: {count}', { count: selectedTabs.length }) }}</span><button class="text-button" @click="excludedTabs = selectedTabs.length === openTabs.length ? openTabs.map(tab => tab.id!) : []">{{ selectedTabs.length === openTabs.length ? t('Desmarcar todas') : t('Selecionar todas') }}</button></div><div class="open-tab-list"><div v-for="tab in openTabs" :key="tab.id" class="open-tab"><input type="checkbox" :checked="!excludedTabs.includes(tab.id!)" :aria-label="t('Selecionar {title}', { title: tab.title })" @change="selectTab(tab)" /><SiteIcon :url="tab.url" /><button class="tab-name" @click="openTab(tab.url)"><strong>{{ tab.title }}</strong><small>{{ domain(tab.url) }}</small></button><button class="icon-button close-tab" :aria-label="t('Fechar aba {title}', { title: tab.title })" @click="closeTab(tab)"><X :size="15" /></button></div><div v-if="!openTabs.length" class="open-empty"><Check :size="24" /><strong>{{ t('Tudo tranquilo por aqui') }}</strong><p>{{ t('As abas desta janela aparecerão aqui.') }}</p></div></div><div class="save-area"><label class="field-label" for="save-destination">{{ t('Salvar em') }}</label><CollectionPicker id="save-destination" v-model="saveDestination" :collections="collections" :t="t" :label="t('Salvar em')" allow-new :disabled="busy" /><label class="option-check"><input v-model="ignoreDuplicates" type="checkbox" :disabled="busy" />{{ t('Ignorar abas duplicadas') }}</label><p v-if="duplicateCount" class="duplicate-hint">{{ t('Duplicadas: {count}', { count: duplicateCount }) }}</p><label class="option-check"><input v-model="closeAfterSave" type="checkbox" :disabled="busy" />{{ t('Fechar abas após salvar') }}</label><button class="button primary" :disabled="!selectedTabs.length || busy" @click="saveTabs"><ArrowDownToLine :size="18" />{{ busy ? t('Salvando…') : t(selectedTabs.length === 1 ? 'Salvar {count} aba' : 'Salvar {count} abas', { count: selectedTabs.length }) }}</button><p>{{ closeAfterSave ? t('As abas selecionadas serão salvas e fechadas.') : t('As abas selecionadas continuarão abertas.') }}<br>{{ t('Esta página continua aberta.') }}</p></div><div class="tip"><Leaf :size="18" /><p><strong>{{ t('Respire. Suas abas estão guardadas.') }}</strong><br>{{ t('Reabra uma coleção quando precisar.') }}</p></div></aside>
+          <aside v-if="selected !== 'trash'" class="open-panel"><div class="open-panel-heading"><span class="live-dot"></span><h2>{{ t('Abas abertas') }}</h2><span class="count-pill">{{ openTabs.length }}</span></div><p class="panel-description">{{ t('Sua janela atual, pronta para guardar.') }}</p><div v-if="openTabs.length" class="selection-toolbar"><span>{{ t('Selecionadas: {count}', { count: selectedTabs.length }) }}</span><button class="text-button" @click="excludedTabs = selectedTabs.length === openTabs.length ? openTabs.map(tab => tab.id!) : []">{{ selectedTabs.length === openTabs.length ? t('Desmarcar todas') : t('Selecionar todas') }}</button></div><div class="open-tab-list"><div v-for="tab in openTabs" :key="tab.id" class="open-tab"><input type="checkbox" :checked="!excludedTabs.includes(tab.id!)" :aria-label="t('Selecionar {title}', { title: tab.title })" @change="selectTab(tab)" /><SiteIcon :url="tab.url" /><button class="tab-name" @click="openTab(tab.url)"><strong>{{ tab.title }}</strong><small>{{ domain(tab.url) }}</small></button><button class="icon-button close-tab" :aria-label="t('Fechar aba {title}', { title: tab.title })" @click="closeTab(tab)"><X :size="15" /></button></div><div v-if="!openTabs.length" class="open-empty"><Check :size="24" /><strong>{{ t('Tudo tranquilo por aqui') }}</strong><p>{{ t('As abas desta janela aparecerão aqui.') }}</p></div></div><div class="save-area"><label class="field-label" for="save-destination">{{ t('Salvar em') }}</label><CollectionPicker id="save-destination" v-model="saveDestination" :collections="collections" :t="t" :label="t('Salvar em')" allow-new :disabled="busy" /><label class="option-check"><input v-model="ignoreDuplicates" type="checkbox" :disabled="busy" />{{ t('Ignorar abas duplicadas') }}</label><p v-if="duplicateCount" class="duplicate-hint">{{ t('Duplicadas: {count}', { count: duplicateCount }) }}</p><label class="option-check"><input v-model="closeAfterSave" type="checkbox" :disabled="busy" />{{ t('Fechar abas após salvar') }}</label><button class="button primary" :disabled="!selectedTabs.length || busy" @click="saveTabs()"><ArrowDownToLine :size="18" />{{ busy ? t('Salvando…') : t(selectedTabs.length === 1 ? 'Salvar {count} aba' : 'Salvar {count} abas', { count: selectedTabs.length }) }}</button><p>{{ closeAfterSave ? t('As abas selecionadas serão salvas e fechadas.') : t('As abas selecionadas continuarão abertas.') }}<br>{{ t('Esta página continua aberta.') }}</p></div><div class="tip"><Leaf :size="18" /><p><strong>{{ t('Respire. Suas abas estão guardadas.') }}</strong><br>{{ t('Reabra uma coleção quando precisar.') }}</p></div></aside>
         </div>
         <footer class="page-footer"><span>{{ t('Desenvolvido por') }} <a href="https://rogerarruda.dev" target="_blank" rel="noopener noreferrer">rogerarruda.dev</a></span><span>TabSaver <span class="footer-dot">●</span> {{ t('Seu espaço de volta.') }}</span></footer>
       </div>
     </main>
-    <ConfirmDialog v-if="confirmation" :options="confirmation" :return-focus="confirmationTarget" :cancel-label="t('Cancelar')" @result="settleConfirmation" /><div v-if="message" class="toast" role="status"><Check :size="18" />{{ message }}</div>
+    <div v-if="shortcutDialog" class="modal-backdrop" @click.self="closeShortcutHelp" @keydown.esc="closeShortcutHelp"><section class="modal shortcuts-modal" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title" @keydown.tab="trapFocus"><div class="modal-heading"><span class="folder-tile mint"><Keyboard :size="23" /></span><button v-focus class="icon-button" :aria-label="t('Fechar')" @click="closeShortcutHelp"><X :size="20" /></button></div><h2 id="shortcuts-title">{{ t('Atalhos do teclado') }}</h2><p>{{ t('Os atalhos funcionam com o Chrome em foco. Você pode alterá-los nas configurações de extensões.') }}</p><dl class="shortcut-list"><div><dt>{{ t('Abrir TabSaver') }}</dt><dd><kbd>{{ shortcutBindings['_execute_action'] || t('Não atribuído') }}</kbd></dd></div><div><dt>{{ t('Salvar abas rapidamente') }}</dt><dd><kbd>{{ shortcutBindings['quick-save-tabs'] || t('Não atribuído') }}</kbd></dd></div></dl><p>{{ t('O salvamento rápido usa todas as abas da janela, ignora duplicatas e cria uma nova coleção. Nenhuma aba é fechada antes da confirmação.') }}</p><div class="modal-actions"><button class="button" @click="closeShortcutHelp">{{ t('Fechar') }}</button><button class="button primary" @click="configureShortcuts">{{ t('Configurar no Chrome') }}</button></div></section></div><ConfirmDialog v-if="confirmation" :options="confirmation" :return-focus="confirmationTarget" :cancel-label="t('Cancelar')" @result="settleConfirmation" /><div v-if="message" class="toast" role="status"><Check :size="18" />{{ message }}</div>
     <div v-if="dialog" class="modal-backdrop" @click.self="dialog = false" @keydown.esc="dialog = false"><form class="modal" role="dialog" aria-modal="true" aria-labelledby="dialog-title" @submit.prevent="submitCollection" @keydown.tab="trapFocus"><div class="modal-heading"><span class="folder-tile mint"><Folder :size="23" /></span><button type="button" class="icon-button" :aria-label="t('Fechar')" @click="dialog = false"><X :size="20" /></button></div><h2 id="dialog-title">{{ editing ? t('Renomear coleção') : t('Um novo espaço para suas abas') }}</h2><p>{{ t('Escolha um nome que ajude você a encontrar suas ideias.') }}</p><label for="collection-name">{{ t('Nome da coleção') }}</label><input id="collection-name" v-model="name" v-focus maxlength="100" :placeholder="t('Ex.: Leituras para depois')" required /><label for="collection-tags" class="tags-label">{{ t('Etiquetas (separadas por vírgula)') }}</label><input id="collection-tags" v-model="tags" maxlength="600" :placeholder="t('Ex.: trabalho, pesquisa')" /><div class="modal-actions"><button type="button" class="button" @click="dialog = false">{{ t('Cancelar') }}</button><button class="button primary" :disabled="!name.trim() || busy">{{ editing ? t('Salvar nome') : t('Criar coleção') }}</button></div></form></div>
   </div>
 </template>

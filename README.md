@@ -193,3 +193,25 @@ Referências das APIs: https://developer.chrome.com/docs/extensions/how-to/ui/fa
   de backup anteriores continuam podendo conter os dados que foram removidos depois.
 - Backups novos incluem a lixeira. Os antigos continuam aceitos e não apagam a
   lixeira atual quando ela não está presente no arquivo.
+
+## Salvamento rápido e atalhos de teclado
+
+O botão com raio **Salvar abas**, ao lado de **Nova coleção**, salva todas as abas
+listadas da janela em uma nova sessão, ignorando duplicatas. Antes de fechar as
+abas, sempre mostra a confirmação. As opções e a seleção do painel lateral não
+são usadas como filtro para esse atalho.
+
+Atalhos sugeridos (Option no lugar de Alt no Mac):
+
+- **Alt + Shift + S**: abre o TabSaver na janela de origem e apresenta o salvamento
+  rápido para confirmação. O comando em segundo plano não salva nem fecha abas.
+- **Alt + Shift + T**: abre o TabSaver, com o mesmo comportamento do clique no ícone.
+
+O botão **Atalhos** mostra as combinações efetivamente atribuídas pelo Chrome,
+inclusive quando não há uma combinação atribuída, e oferece acesso a
+`chrome://extensions/shortcuts`. O usuário pode alterar os atalhos e resolver
+conflitos com outros atalhos. Não são interceptadas teclas nos campos da página.
+A solicitação de salvamento rápido é consumida ao abrir a página e não se repete
+por recarregá-la. Se o tutorial inicial estiver aberto, aguarda seu fechamento.
+
+Referência: https://developer.chrome.com/docs/extensions/reference/api/commands

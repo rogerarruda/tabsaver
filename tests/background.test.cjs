@@ -13,6 +13,7 @@ test('toolbar icon opens the page resolved from the production manifest', async 
   const created = []
   const chrome = {
     action: { onClicked: { addListener: cb => listener = cb } },
+    commands: { onCommand: { addListener: () => {} } },
     contextMenus: { onClicked: { addListener: () => {} } },
     storage: { onChanged: { addListener: () => {} } },
     runtime: { getManifest: () => manifest, getURL: () => 'chrome-extension://test-id/', onInstalled: { addListener: () => {} }, onStartup: { addListener: () => {} } },
@@ -34,6 +35,7 @@ test('context menu registers localized actions and saves a page without closing 
   const chrome = {
     action: { onClicked: { addListener: () => {} }, setBadgeText: async () => {}, setBadgeBackgroundColor: async () => {} },
     runtime: { onInstalled: { addListener: fn => installed = fn }, onStartup: { addListener: () => {} } },
+    commands: { onCommand: { addListener: () => {} } },
     contextMenus: { removeAll: async () => {}, create: menu => menus.push(menu), onClicked: { addListener: fn => clicked = fn } },
     storage: { onChanged: { addListener: () => {} }, local: { get: async defaults => ({ ...defaults, ...data }), set: async next => { Object.assign(data, next); saved() } } },
     tabs: { remove: () => { throw Error('Must not close tabs') } },
@@ -46,4 +48,25 @@ test('context menu registers localized actions and saves a page without closing 
   await savedPromise
   assert.equal(data.collections[0].name, 'Salvos rápidos')
   assert.equal(data.collections[0].tabs[0].url, 'https://example.com/')
+})
+
+test('quick-save command opens confirmation in the originating window without closing or saving tabs', async () => {
+  const manifest = JSON.parse(fs.readFileSync('dist/chrome/manifest.json', 'utf8'))
+  let command
+  const created = []
+  const chrome = {
+    commands: { onCommand: { addListener: fn => command = fn } },
+    action: { onClicked: { addListener: () => {} } },
+    runtime: { getManifest: () => manifest, getURL: () => 'chrome-extension://test-id/', onInstalled: { addListener: () => {} }, onStartup: { addListener: () => {} } },
+    contextMenus: { onClicked: { addListener: () => {} } },
+    storage: { onChanged: { addListener: () => {} }, local: { set: () => { throw Error('Must not save before confirmation') } } },
+    tabs: { create: async options => created.push(options), remove: () => { throw Error('Must not close before confirmation') } },
+  }
+  vm.runInNewContext(fs.readFileSync(`dist/chrome/${manifest.background.service_worker}`, 'utf8'), { chrome, URL, console })
+  await command('quick-save-tabs', { windowId: 17 })
+  assert.equal(created.length, 1)
+  assert.equal(created[0].url, `chrome-extension://test-id/${manifest.chrome_url_overrides.newtab}#quick-save`)
+  assert.equal(created[0].windowId, 17)
+  assert.ok(manifest.commands['quick-save-tabs'].suggested_key.default)
+  assert.ok(manifest.commands._execute_action)
 })
