@@ -32,3 +32,6 @@ extension-env.d.ts
 # release archives and exported personal backups
 tabsaver-chrome*.zip
 tabsaver-backup-*.json
+
+# Extension.js local sessions
+.extension-js
