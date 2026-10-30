@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
-import { History, X, RotateCcw } from 'lucide-vue-next'
+import { History, X, RotateCcw } from '@lucide/vue'
 import { readLocalRecoveries } from './local-recovery'
 import type { LocalRecovery } from './local-recovery'
 import { writeAuxiliaryData } from './collection-storage'

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref, watch, nextTick } from 'vue'
-import { Layers, LayoutGrid, Search, Plus, ArrowUpRight, X, Leaf, Folder, ChevronDown, ArrowDownToLine, Pencil, Trash2, Check, HardDrive, Clock3, Languages, SunMoon, Star, GripVertical, Zap, Keyboard, Pin, Rows3 } from 'lucide-vue-next'
+import { Layers, LayoutGrid, Search, Plus, ArrowUpRight, X, Leaf, Folder, ChevronDown, ArrowDownToLine, Pencil, Trash2, Check, HardDrive, Clock3, Languages, SunMoon, Star, GripVertical, Zap, Keyboard, Pin, Rows3 } from '@lucide/vue'
 
 import LocalRecovery from './LocalRecovery.vue'
 import BackupTools from './BackupTools.vue'

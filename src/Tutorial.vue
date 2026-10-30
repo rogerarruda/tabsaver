@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
-import { CircleHelp, Settings2, X, ArrowRight, ArrowLeft, LayoutGrid, ArrowDownToLine, Folder, ShieldCheck, SunMoon, Check, ExternalLink } from 'lucide-vue-next'
+import { CircleHelp, Settings2, X, ArrowRight, ArrowLeft, LayoutGrid, ArrowDownToLine, Folder, ShieldCheck, SunMoon, Check, ExternalLink } from '@lucide/vue'
 import brandIcon from '../images/tabsaver-icon.svg'
 const props = defineProps<{ t: (text: string, params?: Record<string, string | number>) => string }>()
 const emit = defineEmits<{ modal: [open: boolean]; notice: [text: string] }>()
