@@ -98,3 +98,14 @@ test('pin metadata survives legacy edits and moves pinned collections first with
   assert.deepEqual(stored.tabs, {tab})
   assert.equal(stored.custom, 42)
 })
+
+test('notes round-trip, can be cleared, and preserve legacy raw tabs', () => {
+  const original = {name:'Notes', tabs:{tab}, notes:'Retomar\nDocumentação', pinned:true}
+  const collection = readCollections([original])[0]
+  assert.equal(collection.notes, original.notes)
+  assert.deepEqual(writeCollections([collection]), [original])
+  const changed = writeCollections([{...collection, notes:'', metadataChanged:true}])[0]
+  assert.equal(changed.notes, '')
+  assert.deepEqual(changed.tabs, {tab})
+  assert.equal(changed.pinned, true)
+})

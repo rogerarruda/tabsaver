@@ -1,5 +1,10 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  'Notas': 'Notes',
+  'Editar coleção': 'Edit collection',
+  'Salvar alterações': 'Save changes',
+  'Coleção atualizada.': 'Collection updated.',
+  'O que você quer lembrar ao retomar?': 'What would you like to remember when you return?',
   'Desafixar coleção': 'Unpin collection',
   'Fixar coleção no topo': 'Pin collection to top',
   'Abrindo abas: {count} de {total}. Em lotes de 5.': 'Opening tabs: {count} of {total}. In batches of 5.',

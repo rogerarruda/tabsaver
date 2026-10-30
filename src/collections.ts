@@ -1,5 +1,5 @@
 export type Tab = { id?: number; title: string; url: string }
-export type Collection = { name: string; tabs: Tab[]; date: string; key?: string; source?: unknown; renamed?: boolean; unreadableTabs?: boolean; tabsChanged?: boolean; pinned?: boolean; favorite?: boolean; tags?: string[]; metadataChanged?: boolean }
+export type Collection = { name: string; tabs: Tab[]; date: string; key?: string; source?: unknown; renamed?: boolean; unreadableTabs?: boolean; tabsChanged?: boolean; notes?: string; pinned?: boolean; favorite?: boolean; tags?: string[]; metadataChanged?: boolean }
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value)
 
 function readTabs(input: unknown): { tabs: Tab[]; unreadable: boolean } {
@@ -32,6 +32,7 @@ export function readCollections(input: unknown): Collection[] {
       name: typeof data.name === 'string' ? data.name : `Collection ${index + 1}`,
       date: typeof data.date === 'string' ? data.date : typeof data.date === 'number' && Number.isFinite(new Date(data.date).getTime()) ? new Date(data.date).toISOString() : '',
       tabs: result.tabs,
+      notes: typeof data.notes === 'string' ? data.notes : '',
       pinned: data.pinned === true,
       favorite: data.favorite === true,
       tags: Array.isArray(data.tags) ? data.tags.filter((tag): tag is string => typeof tag === 'string') : [],
@@ -45,10 +46,10 @@ export function readCollections(input: unknown): Collection[] {
 export function writeCollections(collections: Collection[]): unknown[] {
   return collections.map(collection => {
     if (Object.prototype.hasOwnProperty.call(collection, 'source')) {
-      if (record(collection.source)) return { ...collection.source, ...(collection.renamed ? { name: collection.name } : {}), ...(collection.tabsChanged ? { tabs: collection.tabs } : {}), ...(collection.metadataChanged ? { ...(collection.pinned || 'pinned' in collection.source ? { pinned: !!collection.pinned } : {}), favorite: !!collection.favorite, tags: collection.tags || [] } : {}) }
+      if (record(collection.source)) return { ...collection.source, ...(collection.renamed ? { name: collection.name } : {}), ...(collection.tabsChanged ? { tabs: collection.tabs } : {}), ...(collection.metadataChanged ? { ...(collection.notes || 'notes' in collection.source ? { notes: collection.notes || '' } : {}), ...(collection.pinned || 'pinned' in collection.source ? { pinned: !!collection.pinned } : {}), favorite: !!collection.favorite, tags: collection.tags || [] } : {}) }
       return collection.source
     }
-    return { name: collection.name, tabs: collection.tabs, date: collection.date, ...(collection.tags?.length ? { tags: collection.tags } : {}), ...(collection.favorite ? { favorite: true } : {}), ...(collection.pinned ? { pinned: true } : {}) }
+    return { name: collection.name, tabs: collection.tabs, date: collection.date, ...(collection.tags?.length ? { tags: collection.tags } : {}), ...(collection.favorite ? { favorite: true } : {}), ...(collection.pinned ? { pinned: true } : {}), ...(collection.notes ? { notes: collection.notes } : {}) }
   })
 }
 
