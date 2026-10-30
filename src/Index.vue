@@ -10,6 +10,7 @@ import ConfirmDialog from './ConfirmDialog.vue'
 import TrashPanel from './TrashPanel.vue'
 import { readTrash, deletedCollection, deletedTab, restoreDeleted, migrateLastDeleted } from './trash'
 import type { TrashEntry } from './trash'
+import { restoreTabs } from './restore-tabs'
 import { useConfirmation } from './confirmation'
 import brandIcon from '../images/tabsaver-icon.svg'
 import type { Snapshot } from './backup'
@@ -54,6 +55,8 @@ const editing = ref<Collection | null>(null)
 const name = ref('')
 const tags = ref('')
 const busy = ref(false)
+const restoreProgress = ref<{ attempted: number; total: number } | null>(null)
+const cancelRestore = ref(false)
 const loading = ref(true)
 const message = ref('')
 const error = ref('')
@@ -155,10 +158,11 @@ async function restore(collection: Collection, tabs = collection.tabs) {
       const fresh = extension ? (await chrome.tabs.query({ currentWindow: true })).filter(tab => tab.url).map(tab => ({ title: tab.title || '', url: tab.url! })) : []
       pending = uniqueTabs(pending, fresh)
     }
-    let opened = 0
-    for (const tab of pending) if (await openTab(tab.url, false)) opened++
-    notify(t('Abas abertas: {count}. Ignoradas: {skipped}.', { count: opened, skipped: snapshot.length - pending.length }))
-  } catch { error.value = t('Não foi possível abrir esta aba.') } finally { busy.value = false }
+    cancelRestore.value = false
+    restoreProgress.value = { attempted: 0, total: pending.length }
+    const result = await restoreTabs(pending, { open: tab => openTab(tab.url, false), cancelled: () => cancelRestore.value, progress: (attempted, total) => restoreProgress.value = { attempted, total } })
+    notify(result.cancelled ? t('Abertura interrompida. Abas abertas: {count}.', { count: result.opened }) : t('Abas abertas: {count}. Ignoradas: {skipped}.', { count: result.opened, skipped: snapshot.length - pending.length }))
+  } catch { error.value = t('Não foi possível abrir esta aba.') } finally { restoreProgress.value = null; busy.value = false }
 }
 async function closeTab(tab: Tab) {
   if (busy.value || !await requestConfirmation({ title: t('Fechar esta aba?'), body: t('“{title}” será fechada sem salvamento automático.', { title: tab.title }), confirmLabel: t('Fechar aba'), danger: true })) return
@@ -264,7 +268,7 @@ onMounted(async () => {
     else { loadCollections(JSON.parse(localStorage.getItem('tabsaver-preview') || '[]')); loadTrash(JSON.parse(localStorage.getItem('tabsaver-trash') || '[]')); const previous = JSON.parse(localStorage.getItem('tabsaver-lastDeleted') || 'null'); if (trashAvailable.value && previous) { const migrated = migrateLastDeleted(trash.value, previous); await writeAuxiliaryData({ trash: migrated, lastDeleted: null }); loadTrash(migrated) } }
   } catch { storageUnavailable.value = true; error.value = t('Não foi possível carregar suas coleções. Recarregue para tentar novamente.') } finally { loading.value = false }
 })
-onBeforeUnmount(() => { clearTimeout(noticeTimer); window.removeEventListener('hashchange', receiveQuickRequest); window.removeEventListener('focus', readShortcuts); if (extension) { chrome.tabs.onCreated.removeListener(refreshTabs); chrome.tabs.onRemoved.removeListener(refreshTabs); chrome.tabs.onUpdated.removeListener(refreshTabs); chrome.storage.onChanged.removeListener(storageChanged) } })
+onBeforeUnmount(() => { cancelRestore.value = true; clearTimeout(noticeTimer); window.removeEventListener('hashchange', receiveQuickRequest); window.removeEventListener('focus', readShortcuts); if (extension) { chrome.tabs.onCreated.removeListener(refreshTabs); chrome.tabs.onRemoved.removeListener(refreshTabs); chrome.tabs.onUpdated.removeListener(refreshTabs); chrome.storage.onChanged.removeListener(storageChanged) } })
 </script>
 
 <template>
@@ -286,7 +290,7 @@ onBeforeUnmount(() => { clearTimeout(noticeTimer); window.removeEventListener('h
       <header class="topbar"><span class="breadcrumb">{{ t('Meu espaço') }} <span>/</span> <strong>{{ t('Coleções') }}</strong></span><div class="topbar-controls"><span class="local-badge"><span class="status-dot"></span> {{ t('Armazenamento local') }}</span><div class="preferences"><label class="preference-control"><Languages :size="15" /><span class="sr-only">{{ t('Idioma') }}</span><select v-model="language" :aria-label="t('Idioma')"><option value="auto">{{ t('Automático') }}</option><option value="pt-BR">Português (BR)</option><option value="en">English</option></select><ChevronDown :size="12" /></label><label class="preference-control"><SunMoon :size="15" /><span class="sr-only">{{ t('Aparência') }}</span><select v-model="theme" :aria-label="t('Aparência')"><option value="system">{{ t('Sistema') }}</option><option value="light">{{ t('Claro') }}</option><option value="dark">{{ t('Escuro') }}</option></select><ChevronDown :size="12" /></label></div><Tutorial :t="t" @modal="tutorialDialog = $event" @notice="notify" /></div></header>
       <div class="page-content">
         <section class="page-heading"><div><p class="eyebrow">{{ t('ORGANIZE AGORA. CONTINUE DEPOIS.') }}</p><h1>{{ t('Espaço para o que importa') }}<span>.</span></h1><p class="subtitle">{{ t('Guarde suas abas, libere seu navegador e retome de onde parou.') }}</p></div><div class="heading-actions"><div class="heading-buttons"><button class="button quick-save-button" :disabled="busy || loading || !openTabs.length" :title="t('Salvar todas as abas desta janela em uma nova coleção. A confirmação aparece antes de fechar.')" @click="quickSaveTabs"><Zap :size="17" />{{ t('Salvar abas') }}</button><button class="button primary" @click="startEdit()"><Plus :size="18" /> {{ t('Nova coleção') }}</button></div><button ref="shortcutTrigger" class="text-button shortcuts-link" @click="openShortcutHelp"><Keyboard :size="14" />{{ t('Atalhos') }}<kbd v-if="shortcutBindings['quick-save-tabs']">{{ shortcutBindings['quick-save-tabs'] }}</kbd></button></div></section>
-        <div v-if="error" class="error-banner" role="alert"><span>{{ error }}</span><button class="icon-button" :aria-label="t('Dispensar erro')" @click="error = ''"><X :size="18" /></button></div>
+        <div v-if="restoreProgress" class="undo-banner restore-progress" role="status"><span>{{ t('Abrindo abas: {count} de {total}. Em lotes de 5.', { count: restoreProgress.attempted, total: restoreProgress.total }) }}</span><button class="text-button" :disabled="cancelRestore" @click="cancelRestore = true">{{ t('Interromper abertura') }}</button></div><div v-if="error" class="error-banner" role="alert"><span>{{ error }}</span><button class="icon-button" :aria-label="t('Dispensar erro')" @click="error = ''"><X :size="18" /></button></div>
         <div v-if="collections.some(c => c.unreadableTabs)" class="preview-note" role="status">{{ t('Algumas abas antigas não puderam ser exibidas. Os dados originais foram preservados.') }}</div>
         <div v-if="!extension" class="preview-note">{{ t('Prévia da interface · Abra a extensão no Chrome para gerenciar as abas do navegador.') }}</div>
         <section class="overview" :aria-label="t('Resumo')"><div><span class="stat-icon mint"><Layers :size="21" /></span><div><strong>{{ totalTabs }}</strong><span>{{ t('abas guardadas') }}</span></div></div><div><span class="stat-icon lavender"><Folder :size="21" /></span><div><strong>{{ collections.length }}</strong><span>{{ t('coleções criadas') }}</span></div></div><div><span class="stat-icon sand"><LayoutGrid :size="21" /></span><div><strong>{{ openTabs.length }}</strong><span>{{ t('abas abertas agora') }}</span></div></div><p><Leaf :size="19" /><span>{{ t('Um navegador mais leve.') }}<br><strong>{{ t('Uma mente mais livre.') }}</strong></span></p></section>

@@ -1,5 +1,8 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  'Abrindo abas: {count} de {total}. Em lotes de 5.': 'Opening tabs: {count} of {total}. In batches of 5.',
+  'Interromper abertura': 'Stop opening tabs',
+  'Abertura interrompida. Abas abertas: {count}.': 'Stopped opening tabs. Tabs opened: {count}.',
   'Abrir selecionadas': 'Open selected tabs',
   "Salvar todas as abas em uma nova coleção?": "Save all tabs to a new collection?",
 
