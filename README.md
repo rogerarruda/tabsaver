@@ -70,6 +70,8 @@ Antes de atualizar, exporte um backup pelo card **Salvo neste navegador**.
 - **Instalação pelo fonte:** atualize o código e execute `npm ci` e `npm run build` novamente.
 - Em `chrome://extensions`, clique em **Recarregar** no card do TabSaver e atualize as páginas da extensão que já estiverem abertas.
 
+Instalações antigas carregadas de `dist/chrome` podem continuar usando essa pasta: o pós-build mantém uma cópia de compatibilidade atualizada, enquanto novas instalações e o ZIP usam `dist/chromium`. Recarregue a extensão existente para atualizar, sem removê-la.
+
 Mantenha o mesmo perfil do Chrome e a mesma pasta de instalação. Remover a extensão para reinstalá-la pode apagar seus dados locais. Se instalar em outro perfil ou mudar de uma instalação manual para a futura versão da loja, use o backup exportado para transferir suas coleções.
 
 A instalação sem compactação segue o [guia oficial do Chrome](https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world#load-unpacked).

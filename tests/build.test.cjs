@@ -19,3 +19,8 @@ test('production entry points, icons and HTML dependencies are packaged together
 test('release build contains the current license and privacy policy', () => {
   for (const file of ['LICENSE','PRIVACY.md']) assert.deepEqual(fs.readFileSync(path.join(root,file)),fs.readFileSync(file))
 })
+
+test('existing installations at dist/chrome receive the same release files', () => {
+  const files = directory => fs.readdirSync(directory, {withFileTypes:true}).flatMap(entry => entry.isDirectory() ? files(path.join(directory,entry.name)) : [path.relative(root,path.join(directory,entry.name))])
+  for (const file of files(root)) assert.deepEqual(fs.readFileSync(path.resolve('dist/chrome',file)),fs.readFileSync(path.join(root,file)), `Outdated legacy build file: ${file}`)
+})

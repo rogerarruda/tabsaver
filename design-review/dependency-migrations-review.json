@@ -1,0 +1,18 @@
+{
+  "pullRequests": [4, 5, 6],
+  "integrationOrder": [4, 5, 6],
+  "versions": {"vue":"3.5.44","tailwindcss":"4.3.3","extension":"4.1.35","lucide":"@lucide/vue 1.65.0"},
+  "validation": [
+    "52 tests passed with all three migrations installed from the combined lockfile",
+    "Production manifest and HTML resources, shared modules, release documents and legacy-path compatibility verified by tests",
+    "All imported icons render decorative SVGs with aria-hidden",
+    "1440x1000 light layout visually inspected after Tailwind migration",
+    "390x844 dark compact layout has no horizontal overflow",
+    "Production ESM entry points mount the interface and load its SVG logo",
+    "Opening one selected saved page preserves the saved collection and does not close existing tabs",
+    "Actual release packaging step executed locally; ZIP includes manifest, shared modules, LICENSE and PRIVACY.md",
+    "SHA-256 checksum verification succeeded"
+  ],
+  "compatibility": "Build writes dist/chromium and refreshes dist/chrome for existing unpacked installations.",
+  "limitations": ["Browser UI checks used fictitious data and simulated Chrome APIs; native extension installation was not exercised."]
+}
