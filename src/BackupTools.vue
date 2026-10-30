@@ -89,7 +89,7 @@ readBackupStorage().then(data => canUndo.value = !!data.backupRecovery).catch(()
 </script>
 <template>
   <section class="backup-toolbar" :aria-label="t('Backup e restauração')">
-    <span class="backup-label"><ShieldCheck :size="17" />{{ t('Seus dados, com você') }}</span>
+    <span class="backup-label"><ShieldCheck :size="17" />{{ t('Backup e restauração') }}</span>
     <div class="backup-actions"><button class="button" :disabled="working" @click="download"><ArrowDownToLine :size="15" />{{ t('Exportar backup') }}</button><button ref="restoreButton" class="button" :disabled="working" @click="fileInput?.click()"><Upload :size="15" />{{ t('Restaurar backup') }}</button><button v-if="canUndo" class="text-button" :disabled="working" @click="undo"><RotateCcw :size="14" />{{ t('Desfazer restauração') }}</button></div>
     <div v-if="reminder" class="backup-reminder" role="status"><span>{{ t('Há alterações sem uma exportação recente. Salve um backup.') }}</span><button class="text-button" @click="snooze">{{ t('Lembrar amanhã') }}</button></div><p v-if="lastExport" class="backup-export-date">{{ t('Última exportação preparada:') }} {{ new Date(lastExport).toLocaleString(locale) }}</p><input ref="fileInput" class="sr-only" type="file" accept=".json,application/json" tabindex="-1" :aria-label="t('Escolher arquivo de backup')" @change="chooseFile" />
     <p v-if="failure && !pending" class="backup-error" role="alert">{{ failure }}</p>

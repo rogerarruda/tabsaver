@@ -1,0 +1,17 @@
+{
+  "change": "Move backup and local recovery into the Saved in this browser sidebar card",
+  "screenshots": [
+    { "file": "sidebar-backup-desktop.png", "viewport": "1440x1000", "theme": "light" },
+    { "file": "sidebar-backup-mobile-dark.png", "viewport": "390x844", "theme": "dark", "expanded": true }
+  ],
+  "checks": [
+    "One backup toolbar inside the sidebar and none in the main content",
+    "Desktop card starts expanded; narrow-screen card starts collapsed and can be expanded",
+    "Export, import, reminders, and local recovery remain accessible in the expanded card",
+    "Importing a fictitious JSON file opens the restore preview outside the inert sidebar",
+    "Closing the restore preview returns focus to Restore backup in the sidebar",
+    "No horizontal overflow at a 390px viewport",
+    "Production build and all 39 existing tests passed"
+  ],
+  "data": "Fictitious collections and mocked Chrome APIs"
+}
