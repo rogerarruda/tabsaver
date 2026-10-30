@@ -38,7 +38,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release
-          (cd dist/chrome && zip -q -r "$GITHUB_WORKSPACE/release/tabsaver-chrome-${RELEASE_TAG}.zip" .)
+          (cd dist/chromium && zip -q -r "$GITHUB_WORKSPACE/release/tabsaver-chrome-${RELEASE_TAG}.zip" .)
           cd release
           sha256sum "tabsaver-chrome-${RELEASE_TAG}.zip" > SHA256SUMS.txt
       - uses: actions/upload-artifact@v7

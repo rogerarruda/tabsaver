@@ -4,11 +4,11 @@ const fs = require('node:fs')
 const vm = require('node:vm')
 
 test('toolbar icon opens the page resolved from the production manifest', async () => {
-  const manifest = JSON.parse(fs.readFileSync('dist/chrome/manifest.json', 'utf8'))
+  const manifest = JSON.parse(fs.readFileSync('dist/chromium/manifest.json', 'utf8'))
   assert.ok(manifest.action)
   assert.ok(manifest.background.service_worker)
   assert.equal(manifest.action.default_popup, undefined)
-  assert.ok(fs.existsSync(`dist/chrome/${manifest.chrome_url_overrides.newtab}`))
+  assert.ok(fs.existsSync(`dist/chromium/${manifest.chrome_url_overrides.newtab}`))
   let listener
   const created = []
   const chrome = {
@@ -19,7 +19,7 @@ test('toolbar icon opens the page resolved from the production manifest', async 
     runtime: { getManifest: () => manifest, getURL: () => 'chrome-extension://test-id/', onInstalled: { addListener: () => {} }, onStartup: { addListener: () => {} } },
     tabs: { create: async options => created.push(options) },
   }
-  const code = fs.readFileSync(`dist/chrome/${manifest.background.service_worker}`, 'utf8')
+  const code = fs.readFileSync(`dist/chromium/${manifest.background.service_worker}`, 'utf8')
   vm.runInNewContext(code, { chrome, URL, console, crypto, TextEncoder })
   await listener()
   assert.equal(created.length, 1)
@@ -28,7 +28,7 @@ test('toolbar icon opens the page resolved from the production manifest', async 
 })
 
 test('context menu registers localized actions and saves a page without closing it', async () => {
-  const manifest = JSON.parse(fs.readFileSync('dist/chrome/manifest.json', 'utf8'))
+  const manifest = JSON.parse(fs.readFileSync('dist/chromium/manifest.json', 'utf8'))
   let installed, clicked, saved
   const menus = [], data = { collections: [], preferences: { language: 'pt-BR' } }
   const savedPromise = new Promise(resolve => saved = resolve)
@@ -40,7 +40,7 @@ test('context menu registers localized actions and saves a page without closing 
     storage: { onChanged: { addListener: () => {} }, local: { get: async defaults => ({ ...defaults, ...data }), set: async next => { Object.assign(data, next); saved() } } },
     tabs: { remove: () => { throw Error('Must not close tabs') } },
   }
-  vm.runInNewContext(fs.readFileSync(`dist/chrome/${manifest.background.service_worker}`, 'utf8'), { chrome, URL, console, crypto, TextEncoder, navigator: { language: 'pt-BR' }, setTimeout: fn => { fn() } })
+  vm.runInNewContext(fs.readFileSync(`dist/chromium/${manifest.background.service_worker}`, 'utf8'), { chrome, URL, console, crypto, TextEncoder, navigator: { language: 'pt-BR' }, setTimeout: fn => { fn() } })
   await installed()
   assert.equal(menus.length, 2)
   assert.match(menus[0].title, /Salvar/)
@@ -51,7 +51,7 @@ test('context menu registers localized actions and saves a page without closing 
 })
 
 test('quick-save command opens confirmation in the originating window without closing or saving tabs', async () => {
-  const manifest = JSON.parse(fs.readFileSync('dist/chrome/manifest.json', 'utf8'))
+  const manifest = JSON.parse(fs.readFileSync('dist/chromium/manifest.json', 'utf8'))
   let command
   const created = []
   const chrome = {
@@ -62,7 +62,7 @@ test('quick-save command opens confirmation in the originating window without cl
     storage: { onChanged: { addListener: () => {} }, local: { set: () => { throw Error('Must not save before confirmation') } } },
     tabs: { create: async options => created.push(options), remove: () => { throw Error('Must not close before confirmation') } },
   }
-  vm.runInNewContext(fs.readFileSync(`dist/chrome/${manifest.background.service_worker}`, 'utf8'), { chrome, URL, console, crypto, TextEncoder })
+  vm.runInNewContext(fs.readFileSync(`dist/chromium/${manifest.background.service_worker}`, 'utf8'), { chrome, URL, console, crypto, TextEncoder })
   await command('quick-save-tabs', { windowId: 17 })
   assert.equal(created.length, 1)
   assert.equal(created[0].url, `chrome-extension://test-id/${manifest.chrome_url_overrides.newtab}#quick-save`)

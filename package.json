@@ -23,9 +23,9 @@
     "typescript": "5.3.3"
   },
   "scripts": {
-    "dev": "extension dev",
-    "start": "extension start",
-    "build": "extension build",
+    "dev": "extension dev --no-telemetry",
+    "start": "extension start --no-telemetry",
+    "build": "extension build --no-telemetry",
     "test": "npm run build && node --test tests/*.test.cjs",
     "postbuild": "node scripts/copy-release-docs.cjs",
     "release:check": "node scripts/validate-release.cjs",
@@ -40,6 +40,6 @@
     "url": "https://github.com/rogerarruda/tabsaver/issues"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12"
   }
 }

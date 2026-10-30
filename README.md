@@ -41,7 +41,7 @@ Não selecione o ZIP nem o arquivo `manifest.json` individualmente. Os arquivos 
 
 ### Opção 2: compilar a partir do código-fonte (*from source*)
 
-Requisitos: **Git, Node.js 22 ou superior, npm e Google Chrome**. O ambiente usado na validação foi Node.js 22 com npm 10. Não são necessários conta Google, API key, OAuth ou arquivo `.env`.
+Requisitos: **Git, Node.js 22.12 ou superior, npm e Google Chrome**. O ambiente usado na validação foi Node.js 22 com npm 10. Não são necessários conta Google, API key, OAuth ou arquivo `.env`.
 
 A branch `main` contém a versão estável atual; `develop` contém mudanças em desenvolvimento. Para instalar a versão estável:
 
@@ -56,9 +56,9 @@ Depois:
 
 1. Abra `chrome://extensions` e ative **Modo do desenvolvedor**.
 2. Clique em **Carregar sem compactação**.
-3. Selecione **`dist/chrome`** dentro do projeto.
+3. Selecione **`dist/chromium`** dentro do projeto.
 
-A pasta raiz do repositório contém TypeScript e Vue e não deve ser carregada diretamente como extensão. O build gera os arquivos executáveis e o manifesto ajustado em `dist/chrome`.
+A pasta raiz do repositório contém TypeScript e Vue e não deve ser carregada diretamente como extensão. O build gera os arquivos executáveis e o manifesto ajustado em `dist/chromium`.
 
 O `package-lock.json` fixa as versões usadas na instalação. Use `npm ci` para reproduzir esse conjunto de dependências.
 
@@ -186,7 +186,7 @@ Ao reabrir uma página ou visitar o site do desenvolvedor, o navegador acessa o 
 
 ## Desenvolvimento
 
-O projeto usa **Vue 3, TypeScript, Lucide e Extension.js**, com Manifest V3. A versão da ferramenta de build e as dependências resolvidas estão fixadas no projeto.
+O projeto usa **Vue 3, TypeScript, Lucide e Extension.js**, com Manifest V3. A versão da ferramenta de build e as dependências resolvidas estão fixadas no projeto. Os comandos do Extension.js usam `--no-telemetry` para desativar a telemetria da ferramenta.
 
 ```bash
 git switch develop
@@ -200,7 +200,7 @@ Comandos disponíveis:
 | --- | --- |
 | `npm run dev` | Desenvolvimento com recompilação após alterações. |
 | `npm start` | Inicia a extensão em modo de produção pela ferramenta de desenvolvimento. |
-| `npm run build` | Gera o build de produção em `dist/chrome`. |
+| `npm run build` | Gera o build de produção em `dist/chromium`. |
 | `npm test` | Gera o build e executa os testes automatizados. |
 | `npm run version:bump -- patch` | Atualiza package, lockfile e manifesto juntos para a próxima correção. |
 | `npm run release:check -- vX.Y.Z` | Confere se a tag e as versões do projeto estão alinhadas. |
@@ -225,10 +225,10 @@ Os testes usam a API Chrome simulada; os testes do processo em segundo plano tam
 
 ### Gerar um pacote para distribuição
 
-Depois de `npm run build`, compacte **o conteúdo de `dist/chrome`**, com o `manifest.json` na raiz do ZIP. Por exemplo, em um ambiente com o comando `zip`:
+Depois de `npm run build`, compacte **o conteúdo de `dist/chromium`**, com o `manifest.json` na raiz do ZIP. Por exemplo, em um ambiente com o comando `zip`:
 
 ```bash
-cd dist/chrome
+cd dist/chromium
 zip -r ../../tabsaver-chrome.zip .
 ```
 
