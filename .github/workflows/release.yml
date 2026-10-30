@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]
 
 permissions:
   contents: read
@@ -11,14 +11,13 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  RELEASE_TAG: ${{ github.ref_name }}
-
 jobs:
   build:
     name: Validate, test and package
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -28,10 +27,13 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Validate release version
+        id: version
         run: npm run release:check
       - run: npm ci
       - run: npm test
       - name: Package the Chrome extension
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
         shell: bash
         run: |
           set -euo pipefail
@@ -62,14 +64,26 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+          RELEASE_COMMIT: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
+          tag_refs="$(gh api "repos/$GH_REPO/git/matching-refs/tags/$RELEASE_TAG" --jq '.[].ref')"
+          while IFS= read -r tag_ref; do
+            if [[ "$tag_ref" == "refs/tags/$RELEASE_TAG" ]]; then
+              tag_commit="$(gh api "repos/$GH_REPO/commits/$RELEASE_TAG" --jq '.sha')"
+              if [[ "$tag_commit" != "$RELEASE_COMMIT" ]]; then
+                echo "A tag já existe em outro commit. Incremente a versão antes de publicar." >&2
+                exit 1
+              fi
+            fi
+          done <<< "$tag_refs"
           gh release create "$RELEASE_TAG" \
             "release/tabsaver-chrome-${RELEASE_TAG}.zip" \
             release/SHA256SUMS.txt \
             --repo "$GH_REPO" \
-            --verify-tag \
+            --target "$RELEASE_COMMIT" \
             --title "TabSaver ${RELEASE_TAG}" \
             --generate-notes \
             --notes 'Para instalar no Chrome, baixe o arquivo tabsaver-chrome desta release, extraia o ZIP e carregue a pasta em chrome://extensions usando Carregar sem compactação. Consulte o README para instruções completas. Os arquivos Source code são o código-fonte e precisam ser compilados.'

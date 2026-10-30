@@ -43,10 +43,10 @@ Não selecione o ZIP nem o arquivo `manifest.json` individualmente. Os arquivos 
 
 Requisitos: **Git, Node.js 22 ou superior, npm e Google Chrome**. O ambiente usado na validação foi Node.js 22 com npm 10. Não são necessários conta Google, API key, OAuth ou arquivo `.env`.
 
-A implementação atual está na branch `develop`:
+A branch `main` contém a versão estável atual; `develop` contém mudanças em desenvolvimento. Para instalar a versão estável:
 
 ```bash
-git clone --branch develop https://github.com/rogerarruda/tabsaver.git
+git clone --branch main https://github.com/rogerarruda/tabsaver.git
 cd tabsaver
 npm ci
 npm run build
@@ -189,6 +189,7 @@ Ao reabrir uma página ou visitar o site do desenvolvedor, o navegador acessa o 
 O projeto usa **Vue 3, TypeScript, Lucide e Extension.js**, com Manifest V3. A versão da ferramenta de build e as dependências resolvidas estão fixadas no projeto.
 
 ```bash
+git switch develop
 npm ci
 npm run dev
 ```
@@ -234,35 +235,40 @@ O build inclui `LICENSE` e `PRIVACY.md` automaticamente. Esse é o pacote compil
 
 ### Releases automáticas no GitHub
 
-O workflow [Release](.github/workflows/release.yml) roda quando uma tag `vX.Y.Z` é enviada ao GitHub. Ele valida as versões, instala as dependências com `npm ci`, executa os testes, gera o build e publica uma release com:
+O workflow [Release](.github/workflows/release.yml) roda quando uma atualização chega à **`main`**. A `main` representa a release atual; a `develop` recebe o trabalho em andamento. O fluxo recomendado é:
+
+1. Desenvolva e revise as mudanças em `develop`, incluindo os PRs do Dependabot.
+2. Defina a próxima versão em `package.json`, `package-lock.json` (incluindo a versão raiz) e `manifest.json`. Os três arquivos precisam ter o mesmo número.
+3. Execute `npm test` e confira a extensão instalada no Chrome.
+4. Envie os commits de `develop` e abra um pull request de **`develop` para `main`**.
+5. Após a aprovação dos testes e a mesclagem, o GitHub gera a release automaticamente.
+
+Para preparar a próxima versão em `develop`, por exemplo:
+
+```bash
+git switch develop
+npm version patch --no-git-tag-version
+```
+
+Esse comando atualiza os arquivos npm. Atualize também `manifest.json` para o mesmo número e confira a versão, por exemplo `npm run release:check -- v0.0.3`. Faça o commit e envie `develop` antes de abrir o PR para `main`.
+
+O workflow instala as dependências, valida as versões, executa os testes e gera o build. Se tudo passar, cria a tag correspondente, como `v0.0.3`, no **commit de `main` que disparou a execução**, e publica:
 
 - `tabsaver-chrome-vX.Y.Z.zip`: extensão compilada, com o manifesto na raiz, licença e política de privacidade.
 - `SHA256SUMS.txt`: soma SHA-256 do ZIP para conferir a integridade do download.
 - Notas geradas pelo GitHub e instruções breves de instalação.
 
-Para publicar a versão atual, depois de revisar e enviar os commits que contêm esta configuração:
+Acompanhe a execução na aba **Actions** e o resultado em [Releases](https://github.com/rogerarruda/tabsaver/releases). Não é necessário criar ou enviar tags manualmente. Pushes em `develop` executam o CI e não publicam releases.
 
-```bash
-git switch develop
-npm run release:check -- v0.0.2
-git push origin develop
-git tag -a v0.0.2 -m "TabSaver v0.0.2"
-git push origin v0.0.2
-```
+O fluxo aceita versões estáveis com três números, como `0.0.3`. A versão deve ser incrementada a cada nova publicação. Uma release existente não é sobrescrita: reutilizar o número de uma versão já publicada faz a publicação falhar. Não promova outra versão para `main` antes de concluir a publicação da anterior; se a execução falhar, corrija o problema ou execute novamente o workflow pela aba Actions.
 
-Acompanhe a execução na aba **Actions** e o resultado em [Releases](https://github.com/rogerarruda/tabsaver/releases). Criar uma tag apenas no computador não inicia a automação; é necessário enviá-la ao GitHub.
-
-Para a próxima versão, atualize `package.json`, `package-lock.json` (incluindo a versão raiz) e `manifest.json` para o mesmo número, faça o commit e envie uma nova tag correspondente. `npm version patch --no-git-tag-version` atualiza os arquivos npm; o manifesto precisa ser atualizado também. Confirme o número final com `npm run release:check -- vX.Y.Z` antes de criar a tag.
-
-O fluxo aceita versões estáveis com três números, como `v0.0.3`. Uma tag diferente das versões dos arquivos interrompe a publicação. Uma release existente não é sobrescrita: use uma nova versão para novos pacotes.
-
-Não é necessário cadastrar um token pessoal: o workflow usa o `GITHUB_TOKEN` fornecido pelo GitHub, com permissão de escrita apenas no job de publicação. O repositório precisa permitir GitHub Actions e criação de releases. Esta automação não publica na Chrome Web Store.
+Não é necessário cadastrar um token pessoal: o workflow usa o `GITHUB_TOKEN` fornecido pelo GitHub, com permissão de escrita apenas no job de publicação. O repositório precisa permitir GitHub Actions e criação de tags/releases. Esta automação não publica na Chrome Web Store.
 
 Referência: [criação de releases pelo GitHub CLI](https://cli.github.com/manual/gh_release_create).
 
 ### CI e Dependabot
 
-O workflow [CI](.github/workflows/ci.yml) executa o build e os testes em pushes e pull requests para `main` e `develop`, incluindo PRs de dependências.
+O workflow [CI](.github/workflows/ci.yml) executa o build e os testes em pushes e pull requests para `main` e `develop`, incluindo PRs de dependências. Em alterações para `main`, também valida o alinhamento das versões. Para manter a `main` estável, configure sua proteção no GitHub exigindo pull request e CI aprovado antes de mesclar.
 
 A configuração [Dependabot](.github/dependabot.yml) verifica dependências npm e GitHub Actions semanalmente, às segundas-feiras às 09h no fuso de São Paulo. Os PRs de atualização de versão são direcionados para `develop`, com limite de cinco PRs abertos por ecossistema. Atualizações menores e correções são agrupadas; versões principais são abertas separadamente para revisão. Não há mesclagem automática.
 
@@ -274,7 +280,7 @@ Referência: [configuração oficial do Dependabot](https://docs.github.com/en/c
 
 Sugestões e correções são bem-vindas em [Issues](https://github.com/rogerarruda/tabsaver/issues) e pull requests. Descreva o comportamento esperado, as etapas para reproduzir e a versão do Chrome. Use dados fictícios nas capturas e exemplos; não publique suas coleções ou backups pessoais.
 
-Para contribuir com código, crie uma branch a partir de `develop`, mantenha as traduções em português e inglês, preserve a compatibilidade dos dados existentes e execute `npm test` antes de enviar o pull request.
+Para contribuir com código, crie uma branch a partir de `develop` e direcione seu pull request para `develop`, mantenha as traduções em português e inglês, preserve a compatibilidade dos dados existentes e execute `npm test` antes de enviar o pull request.
 
 ## Licença
 

@@ -17,8 +17,10 @@ if (require.main === module) {
   try {
     const read = file => JSON.parse(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'))
     const lock = read('package-lock.json')
-    const version = validateRelease(process.argv[2] || process.env.RELEASE_TAG, read('package.json').version, read('manifest.json').version, lock.version)
+    const packageVersion = read('package.json').version
+    const version = validateRelease(process.argv[2] || process.env.RELEASE_TAG || `v${packageVersion}`, packageVersion, read('manifest.json').version, lock.version)
     assert.equal(lock.packages[''].version, version, 'A versão raiz do lockfile também deve coincidir.')
+    if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `tag=v${version}\n`)
     console.log(`Versão ${version} validada para publicação.`)
   } catch (error) {
     console.error(error.message)
