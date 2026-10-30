@@ -202,6 +202,7 @@ Comandos disponíveis:
 | `npm start` | Inicia a extensão em modo de produção pela ferramenta de desenvolvimento. |
 | `npm run build` | Gera o build de produção em `dist/chrome`. |
 | `npm test` | Gera o build e executa os testes automatizados. |
+| `npm run version:bump -- patch` | Atualiza package, lockfile e manifesto juntos para a próxima correção. |
 | `npm run release:check -- vX.Y.Z` | Confere se a tag e as versões do projeto estão alinhadas. |
 
 Estrutura principal:
@@ -238,7 +239,7 @@ O build inclui `LICENSE` e `PRIVACY.md` automaticamente. Esse é o pacote compil
 O workflow [Release](.github/workflows/release.yml) roda quando uma atualização chega à **`main`**. A `main` representa a release atual; a `develop` recebe o trabalho em andamento. O fluxo recomendado é:
 
 1. Desenvolva e revise as mudanças em `develop`, incluindo os PRs do Dependabot.
-2. Defina a próxima versão em `package.json`, `package-lock.json` (incluindo a versão raiz) e `manifest.json`. Os três arquivos precisam ter o mesmo número.
+2. Prepare a próxima versão com `npm run version:bump -- patch` (ou `minor`, `major` ou um número explícito). O comando mantém `package.json`, `package-lock.json` e `manifest.json` alinhados.
 3. Execute `npm test` e confira a extensão instalada no Chrome.
 4. Envie os commits de `develop` e abra um pull request de **`develop` para `main`**.
 5. Após a aprovação dos testes e a mesclagem, o GitHub gera a release automaticamente.
@@ -247,10 +248,19 @@ Para preparar a próxima versão em `develop`, por exemplo:
 
 ```bash
 git switch develop
-npm version patch --no-git-tag-version
+npm run version:bump -- patch
 ```
 
-Esse comando atualiza os arquivos npm. Atualize também `manifest.json` para o mesmo número e confira a versão, por exemplo `npm run release:check -- v0.0.3`. Faça o commit e envie `develop` antes de abrir o PR para `main`.
+Esse comando atualiza `package.json`, as duas entradas da versão do projeto no `package-lock.json` e `manifest.json`. Não cria commit nem tag. Confira as alterações, faça o commit e envie `develop` antes de abrir o PR para `main`.
+
+| Comando, partindo de `0.0.2` | Próxima versão | Uso |
+| --- | --- | --- |
+| `npm run version:bump -- patch` | `0.0.3` | Correções compatíveis. |
+| `npm run version:bump -- minor` | `0.1.0` | Novas funcionalidades. |
+| `npm run version:bump -- major` | `1.0.0` | Mudanças incompatíveis ou lançamento principal planejado. |
+| `npm run version:bump -- 1.2.3` | `1.2.3` | Definir explicitamente uma versão maior que a atual. |
+
+Os números usam o mesmo formato no npm e no Chrome, sem prefixo `v`. A tag da release recebe esse prefixo: versão `0.0.3` → tag `v0.0.3` → arquivo `tabsaver-chrome-v0.0.3.zip`. O workflow não incrementa a versão ao publicar: ele usa o número escolhido e revisado em `develop`. Se os arquivos estiverem diferentes, o CI para `main` bloqueia a validação.
 
 O workflow instala as dependências, valida as versões, executa os testes e gera o build. Se tudo passar, cria a tag correspondente, como `v0.0.3`, no **commit de `main` que disparou a execução**, e publica:
 

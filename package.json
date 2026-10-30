@@ -28,7 +28,8 @@
     "build": "extension build",
     "test": "npm run build && node --test tests/*.test.cjs",
     "postbuild": "node scripts/copy-release-docs.cjs",
-    "release:check": "node scripts/validate-release.cjs"
+    "release:check": "node scripts/validate-release.cjs",
+    "version:bump": "node scripts/bump-version.cjs"
   },
   "repository": {
     "type": "git",
