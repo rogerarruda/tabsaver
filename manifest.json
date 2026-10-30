@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/chrome-manifest.json",
   "manifest_version": 3,
-  "version": "0.0.2",
+  "version": "1.0.0",
   "name": "tabsaver",
   "description": "Salve e organize suas abas em coleções, libere memória do navegador e retome de onde parou.",
   "icons": {
