@@ -56,11 +56,13 @@ test('backup round trip includes trash and remains compatible with old files', (
 test('moving a collection to trash uses one atomic Chrome storage write', async () => {
   const storage = load('collection-storage')
   let payload, calls = 0
-  global.chrome = { storage: { local: { set: async next => { calls++; payload = next } } } }
+  global.chrome = { storage: { local: { get: async defaults => ({...defaults, collections:[original]}), set: async next => { calls++; payload = next } } } }
   const trash = [api.deletedCollection(model.readCollections([original])[0], 0)]
   await storage.writeCollectionData([], { trash })
   assert.equal(calls, 1)
-  assert.deepEqual(payload, { collections: [], trash })
+  assert.deepEqual(payload.collections, [])
+  assert.deepEqual(payload.trash, trash)
+  assert.deepEqual(payload.localRecoveries[0].collections, [original])
   chrome.storage.local.set = async () => { throw new Error('quota') }
   await assert.rejects(storage.writeCollectionData([], { trash }))
   delete global.chrome

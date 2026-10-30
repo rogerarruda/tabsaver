@@ -1,5 +1,17 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  'Recuperação local': 'Local recovery',
+  'Não foi possível carregar os pontos de recuperação.': 'Could not load recovery points.',
+  'Restaurar este ponto de recuperação?': 'Restore this recovery point?',
+  'Coleções e lixeira serão substituídas pela cópia escolhida. Uma cópia dos dados atuais será criada antes de restaurar. As abas abertas não serão alteradas.': 'Collections and trash will be replaced with the selected copy. A copy of the current data will be created before restoring. Open tabs will remain unchanged.',
+  'Restaurar dados': 'Restore data',
+  'Ponto de recuperação restaurado.': 'Recovery point restored.',
+  'Não foi possível restaurar. Os dados foram preservados.': 'Could not restore. Your data was preserved.',
+  'Até 5 cópias recentes são criadas automaticamente antes de alterar coleções ou a lixeira. O histórico pode ser menor para bibliotecas grandes.': 'Up to 5 recent copies are created automatically before changing collections or trash. Large libraries may have fewer recovery points.',
+  'Estas cópias ficam neste navegador. Exporte um backup para proteger seus dados contra desinstalação ou perda do perfil.': 'These copies stay in this browser. Export a backup to protect your data against uninstalling or losing the browser profile.',
+  'Ainda não há pontos de recuperação. Eles aparecerão após a próxima alteração.': 'No recovery points yet. They will appear after the next change.',
+  'Coleções: {count}': 'Collections: {count}',
+
   'Grupo sem nome': 'Unnamed group',
   'As páginas foram abertas, mas alguns grupos não puderam ser recriados.': 'The pages were opened, but some groups could not be recreated.',
   'Resultados em todas as coleções': 'Results across all collections',

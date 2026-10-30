@@ -1,3 +1,4 @@
+import { writeCollectionData } from './collection-storage'
 import { manualTab, quickSave } from './collections'
 
 async function openPage(quick = false, windowId?: number) {
@@ -38,7 +39,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       const data = await chrome.storage.local.get({ collections: [] })
       if (!Array.isArray(data.collections)) throw new Error('Invalid collections')
       const name = await menuLanguage() ? 'Salvos rápidos' : 'Quick saves'
-      await chrome.storage.local.set({ collections: quickSave(data.collections, savedTab, name) })
+      await writeCollectionData(quickSave(data.collections, savedTab, name))
       await chrome.action.setBadgeBackgroundColor({ color: '#2c543f' })
       await chrome.action.setBadgeText({ text: '✓' })
       setTimeout(() => chrome.action.setBadgeText({ text: '' }).catch(() => {}), 4000)

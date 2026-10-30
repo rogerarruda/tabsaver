@@ -2,6 +2,7 @@
 import { computed, onMounted, onBeforeUnmount, ref, watch, nextTick } from 'vue'
 import { Layers, LayoutGrid, Search, Plus, ArrowUpRight, X, Leaf, Folder, ChevronDown, ArrowDownToLine, Pencil, Trash2, Check, HardDrive, Clock3, Languages, SunMoon, Star, GripVertical, Zap, Keyboard, Pin } from 'lucide-vue-next'
 
+import LocalRecovery from './LocalRecovery.vue'
 import BackupTools from './BackupTools.vue'
 import Tutorial from './Tutorial.vue'
 import SiteIcon from './SiteIcon.vue'
@@ -52,6 +53,7 @@ function selectAllSaved(collection: Collection) { savedSelection.value[collectio
 
 const dialog = ref(false)
 const backupDialog = ref(false)
+const recoveryDialog = ref(false)
 const tutorialDialog = ref(false)
 const shortcutDialog = ref(false)
 const shortcutTrigger = ref<HTMLButtonElement | null>(null)
@@ -125,7 +127,7 @@ async function saveTabs(quick = false) {
   } catch { error.value = t('Não foi possível concluir. Confira a coleção salva antes de tentar novamente.') } finally { busy.value = false }
 }
 async function quickSaveTabs() {
-  if (busy.value || loading.value || dialog.value || backupDialog.value || tutorialDialog.value || shortcutDialog.value || confirmation.value) return
+  if (busy.value || loading.value || dialog.value || backupDialog.value || recoveryDialog.value || tutorialDialog.value || shortcutDialog.value || confirmation.value) return
   if (extension && !await refreshTabs()) return
   if (!openTabs.value.length) { notify(t('Não há abas abertas para salvar nesta janela.')); return }
   await saveTabs(true)
@@ -145,8 +147,8 @@ function receiveQuickRequest() {
   history.replaceState(null, '', location.pathname + location.search)
   quickRequest.value = true
 }
-watch([quickRequest, loading, busy, dialog, backupDialog, tutorialDialog, shortcutDialog, confirmation], () => {
-  if (!quickRequest.value || loading.value || busy.value || dialog.value || backupDialog.value || tutorialDialog.value || shortcutDialog.value || confirmation.value) return
+watch([quickRequest, loading, busy, dialog, backupDialog, recoveryDialog, tutorialDialog, shortcutDialog, confirmation], () => {
+  if (!quickRequest.value || loading.value || busy.value || dialog.value || backupDialog.value || recoveryDialog.value || tutorialDialog.value || shortcutDialog.value || confirmation.value) return
   quickRequest.value = false
   quickSaveTabs()
 }, { flush: 'post' })
@@ -289,7 +291,7 @@ onBeforeUnmount(() => { cancelRestore.value = true; clearTimeout(noticeTimer); w
 
 <template>
   <div class="app-shell">
-    <aside class="sidebar" :inert="dialog || backupDialog || tutorialDialog || shortcutDialog || !!confirmation || undefined">
+    <aside class="sidebar" :inert="dialog || backupDialog || recoveryDialog || tutorialDialog || shortcutDialog || !!confirmation || undefined">
       <a class="brand" href="#" @click.prevent="selected = 'all'"><img class="brand-logo" :src="brandIcon" alt="" width="37" height="37" />TabSaver<span class="brand-dot">.</span></a>
       <div class="workspace-label">{{ t('SEU ESPAÇO') }}</div>
       <button class="nav-item" :class="{ active: selected === 'all' }" @click="selected = 'all'"><LayoutGrid :size="18" /> {{ t('Todas as coleções') }} <span class="nav-count">{{ collections.length }}</span></button>
@@ -302,7 +304,7 @@ onBeforeUnmount(() => { cancelRestore.value = true; clearTimeout(noticeTimer); w
       <div class="sidebar-footer"><span>{{ t('Menos abas. Mais espaço.') }}</span><Leaf :size="15" /></div>
     </aside>
 
-    <main :inert="dialog || backupDialog || tutorialDialog || shortcutDialog || !!confirmation || undefined">
+    <main :inert="dialog || backupDialog || recoveryDialog || tutorialDialog || shortcutDialog || !!confirmation || undefined">
       <header class="topbar"><span class="breadcrumb">{{ t('Meu espaço') }} <span>/</span> <strong>{{ t('Coleções') }}</strong></span><div class="topbar-controls"><span class="local-badge"><span class="status-dot"></span> {{ t('Armazenamento local') }}</span><div class="preferences"><label class="preference-control"><Languages :size="15" /><span class="sr-only">{{ t('Idioma') }}</span><select v-model="language" :aria-label="t('Idioma')"><option value="auto">{{ t('Automático') }}</option><option value="pt-BR">Português (BR)</option><option value="en">English</option></select><ChevronDown :size="12" /></label><label class="preference-control"><SunMoon :size="15" /><span class="sr-only">{{ t('Aparência') }}</span><select v-model="theme" :aria-label="t('Aparência')"><option value="system">{{ t('Sistema') }}</option><option value="light">{{ t('Claro') }}</option><option value="dark">{{ t('Escuro') }}</option></select><ChevronDown :size="12" /></label></div><Tutorial :t="t" @modal="tutorialDialog = $event" @notice="notify" /></div></header>
       <div class="page-content">
         <section class="page-heading"><div><p class="eyebrow">{{ t('ORGANIZE AGORA. CONTINUE DEPOIS.') }}</p><h1>{{ t('Espaço para o que importa') }}<span>.</span></h1><p class="subtitle">{{ t('Guarde suas abas, libere seu navegador e retome de onde parou.') }}</p></div><div class="heading-actions"><div class="heading-buttons"><button class="button quick-save-button" :disabled="busy || loading || !openTabs.length" :title="t('Salvar todas as abas desta janela em uma nova coleção. A confirmação aparece antes de fechar.')" @click="quickSaveTabs"><Zap :size="17" />{{ t('Salvar abas') }}</button><button class="button primary" @click="startEdit()"><Plus :size="18" /> {{ t('Nova coleção') }}</button></div><button ref="shortcutTrigger" class="text-button shortcuts-link" @click="openShortcutHelp"><Keyboard :size="14" />{{ t('Atalhos') }}<kbd v-if="shortcutBindings['quick-save-tabs']">{{ shortcutBindings['quick-save-tabs'] }}</kbd></button></div></section>
@@ -311,7 +313,7 @@ onBeforeUnmount(() => { cancelRestore.value = true; clearTimeout(noticeTimer); w
         <div v-if="!extension" class="preview-note">{{ t('Prévia da interface · Abra a extensão no Chrome para gerenciar as abas do navegador.') }}</div>
         <section class="overview" :aria-label="t('Resumo')"><div><span class="stat-icon mint"><Layers :size="21" /></span><div><strong>{{ totalTabs }}</strong><span>{{ t('abas guardadas') }}</span></div></div><div><span class="stat-icon lavender"><Folder :size="21" /></span><div><strong>{{ collections.length }}</strong><span>{{ t('coleções criadas') }}</span></div></div><div><span class="stat-icon sand"><LayoutGrid :size="21" /></span><div><strong>{{ openTabs.length }}</strong><span>{{ t('abas abertas agora') }}</span></div></div><p><Leaf :size="19" /><span>{{ t('Um navegador mais leve.') }}<br><strong>{{ t('Uma mente mais livre.') }}</strong></span></p></section>
         <BackupTools :revision="[collections, language, theme]" :t="t" :locale="locale" :flush-preferences="flushPreferences" @restored="backupRestored" @notice="notify" @modal="backupDialog = $event" />
-        <div class="content-layout" :class="{ 'trash-layout': selected === 'trash' }">
+        <div class="recovery-tools"><LocalRecovery :t="t" :locale="locale" @modal="recoveryDialog = $event" @notice="notify" @restored="loadCollections($event.collections); loadTrash($event.trash); selected = 'all'; query = ''" /></div><div class="content-layout" :class="{ 'trash-layout': selected === 'trash' }">
           <section class="collections-section">
             <div v-if="selected === 'trash'" class="filter-bar"><button class="text-button" @click="selected = 'all'">{{ t('Todas as coleções') }}</button></div><TrashPanel v-if="selected === 'trash'" :entries="trash" :t="t" :locale="locale" :busy="busy || !trashAvailable" @restore="restoreTrashItem" @remove="permanentlyDelete" @empty="permanentlyDelete()" /><template v-else><div v-if="trash.length" class="undo-banner"><span>{{ t('Há itens na lixeira.') }}</span><button class="text-button" @click="selected = 'trash'">{{ t('Ver lixeira') }}</button></div><div class="section-heading"><h2>{{ heading }} <span>{{ visible.length }}</span></h2><label class="sort-label"><span class="sr-only">{{ t('Ordenar coleções') }}</span><select v-model="sort"><option value="newest">{{ t('Mais recentes') }}</option><option value="oldest">{{ t('Mais antigas') }}</option><option value="name">{{ t('Nome A–Z') }}</option></select><ChevronDown :size="14" /></label></div>
             <div class="filter-bar"><button class="text-button" @click="selected = 'trash'"><Trash2 :size="14" />{{ t('Lixeira') }} ({{ trash.length }})</button><button class="text-button" @click="selected = selected === 'favorites' ? 'all' : 'favorites'"><Star :size="14" />{{ selected === 'favorites' ? t('Todas as coleções') : t('Favoritos') }}</button></div><label class="search-field"><Search :size="18" /><input v-model="query" :placeholder="t('Buscar coleções ou abas…')" :aria-label="t('Buscar coleções ou abas')" /><button v-if="query" class="icon-button" :aria-label="t('Limpar busca')" @click="query = ''"><X :size="16" /></button></label>

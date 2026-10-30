@@ -1,7 +1,14 @@
+import { captureRecovery } from './local-recovery'
 export async function writeAuxiliaryData(values: Record<string, unknown>) {
-  if (typeof chrome !== 'undefined' && chrome.storage?.local) { await chrome.storage.local.set(values); return }
+  const changingData = 'collections' in values || 'trash' in values
+  if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+    const current = changingData ? await chrome.storage.local.get({ collections: [], trash: [], localRecoveries: [] }) : null
+    const localRecoveries = current ? captureRecovery(current.localRecoveries, current.collections, current.trash) : null
+    await chrome.storage.local.set({ ...values, ...(localRecoveries ? { localRecoveries } : {}) }); return
+  }
+  if (changingData) values = { ...values, localRecoveries: captureRecovery(JSON.parse(localStorage.getItem('tabsaver-localRecoveries') || '[]'), JSON.parse(localStorage.getItem('tabsaver-preview') || '[]'), JSON.parse(localStorage.getItem('tabsaver-trash') || '[]')) }
   const mapped: Record<string, string> = {}
-  for (const [key, value] of Object.entries(values)) mapped[key === 'collections' ? 'tabsaver-preview' : `tabsaver-${key}`] = JSON.stringify(value)
+  for (const [key, value] of Object.entries(values)) mapped[key === 'collections' ? 'tabsaver-preview' : key === 'backupRecovery' ? 'tabsaver-recovery' : `tabsaver-${key}`] = JSON.stringify(value)
   const before = Object.keys(mapped).map(key => [key, localStorage.getItem(key)] as const)
   try { for (const [key, value] of Object.entries(mapped)) localStorage.setItem(key, value) }
   catch (error) { for (const [key, value] of before) { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value) } throw error }

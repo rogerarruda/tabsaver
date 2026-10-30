@@ -1,3 +1,4 @@
+import { writeAuxiliaryData } from './collection-storage'
 import { readCollections } from './collections'
 import { readTrash } from './trash'
 import type { TrashEntry } from './trash'
@@ -46,12 +47,7 @@ export async function readBackupStorage(): Promise<Snapshot & { backupRecovery?:
 }
 export async function writeBackupStorage(snapshot: Snapshot, recovery: Snapshot | null) {
   const valid = validateSnapshot(snapshot)
-  if (extension()) { await chrome.storage.local.set({ ...valid, backupRecovery: recovery, lastDeleted: null }); return }
-  const values = { 'tabsaver-preview': JSON.stringify(valid.collections), 'tabsaver-preferences': JSON.stringify(valid.preferences), 'tabsaver-recovery': JSON.stringify(recovery), 'tabsaver-lastDeleted': 'null' }
-  if (valid.trash !== undefined) Object.assign(values, { 'tabsaver-trash': JSON.stringify(valid.trash) })
-  const before = Object.keys(values).map(key => [key, localStorage.getItem(key)] as const)
-  try { for (const [key, value] of Object.entries(values)) localStorage.setItem(key, value) }
-  catch (error) { for (const [key, value] of before) { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value) } throw error }
+  await writeAuxiliaryData({ ...valid, backupRecovery: recovery, lastDeleted: null })
 }
 
 export type BackupMarker = { fingerprint?: string; date?: string; snoozeUntil?: number }

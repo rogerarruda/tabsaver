@@ -32,7 +32,7 @@ test('merge preserves existing records and skips identical records regardless of
 })
 test('Chrome restore writes snapshot and recovery together, undo restores original data', async () => {
   let store = { ...snapshot }
-  global.chrome = { storage: { local: { get: async () => store, set: async values => { store = { ...store, ...values } } } } }
+  global.chrome = { storage: { local: { get: async defaults => ({...defaults, ...store}), set: async values => { store = { ...store, ...values } } } } }
   const restored = { collections: [], preferences: { language: 'en', theme: 'dark' } }
   await api.writeBackupStorage(restored, snapshot)
   assert.deepEqual((await api.readBackupStorage()).collections, [])

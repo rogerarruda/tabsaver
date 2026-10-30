@@ -20,7 +20,7 @@ test('toolbar icon opens the page resolved from the production manifest', async 
     tabs: { create: async options => created.push(options) },
   }
   const code = fs.readFileSync(`dist/chrome/${manifest.background.service_worker}`, 'utf8')
-  vm.runInNewContext(code, { chrome, URL, console })
+  vm.runInNewContext(code, { chrome, URL, console, crypto, TextEncoder })
   await listener()
   assert.equal(created.length, 1)
   assert.equal(created[0].url, `chrome-extension://test-id/${manifest.chrome_url_overrides.newtab}`)
@@ -40,7 +40,7 @@ test('context menu registers localized actions and saves a page without closing 
     storage: { onChanged: { addListener: () => {} }, local: { get: async defaults => ({ ...defaults, ...data }), set: async next => { Object.assign(data, next); saved() } } },
     tabs: { remove: () => { throw Error('Must not close tabs') } },
   }
-  vm.runInNewContext(fs.readFileSync(`dist/chrome/${manifest.background.service_worker}`, 'utf8'), { chrome, URL, console, navigator: { language: 'pt-BR' }, setTimeout: fn => { fn() } })
+  vm.runInNewContext(fs.readFileSync(`dist/chrome/${manifest.background.service_worker}`, 'utf8'), { chrome, URL, console, crypto, TextEncoder, navigator: { language: 'pt-BR' }, setTimeout: fn => { fn() } })
   await installed()
   assert.equal(menus.length, 2)
   assert.match(menus[0].title, /Salvar/)
@@ -62,7 +62,7 @@ test('quick-save command opens confirmation in the originating window without cl
     storage: { onChanged: { addListener: () => {} }, local: { set: () => { throw Error('Must not save before confirmation') } } },
     tabs: { create: async options => created.push(options), remove: () => { throw Error('Must not close before confirmation') } },
   }
-  vm.runInNewContext(fs.readFileSync(`dist/chrome/${manifest.background.service_worker}`, 'utf8'), { chrome, URL, console })
+  vm.runInNewContext(fs.readFileSync(`dist/chrome/${manifest.background.service_worker}`, 'utf8'), { chrome, URL, console, crypto, TextEncoder })
   await command('quick-save-tabs', { windowId: 17 })
   assert.equal(created.length, 1)
   assert.equal(created[0].url, `chrome-extension://test-id/${manifest.chrome_url_overrides.newtab}#quick-save`)
