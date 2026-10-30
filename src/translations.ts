@@ -1,5 +1,6 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  'Abrir selecionadas': 'Open selected tabs',
   "Salvar todas as abas em uma nova coleção?": "Save all tabs to a new collection?",
 
   "Não há abas abertas para salvar nesta janela.": "There are no open tabs to save in this window.",
