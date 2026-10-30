@@ -1,5 +1,8 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  'Nenhuma aba encontrada. Veja as coleções abaixo.': 'No tabs found. See the collections below.',
+  'Não foi possível abrir {count} abas. Elas continuam salvas na coleção.': 'Could not open {count} tabs. They remain saved in the collection.',
+  'Restaurar também as preferências': 'Also restore preferences',
   'Densidade da interface': 'Interface density',
   'Confortável': 'Comfortable',
   'Compacto': 'Compact',

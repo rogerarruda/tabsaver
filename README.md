@@ -215,3 +215,28 @@ A solicitação de salvamento rápido é consumida ao abrir a página e não se 
 por recarregá-la. Se o tutorial inicial estiver aberto, aguarda seu fechamento.
 
 Referência: https://developer.chrome.com/docs/extensions/reference/api/commands
+
+### Reabrir e organizar coleções
+
+- Expanda uma coleção para marcar as abas desejadas e usar **Abrir selecionadas**. **Abrir coleção** continua disponível para abrir todas. As abas salvas permanecem na coleção.
+- As páginas abrem em segundo plano, em lotes de cinco, com uma pausa de um segundo entre os lotes. O progresso aparece no topo e **Interromper abertura** cancela as próximas aberturas. As páginas já abertas permanecem abertas.
+- Dez ou mais novas abas exigem confirmação. Links já abertos na janela e duplicatas são ignorados.
+- A opção de fixar mantém coleções acima das demais, independentemente da ordenação. Favoritos continuam disponíveis separadamente.
+- Use o botão de edição para alterar nome, etiquetas e notas de contexto.
+- A busca mostra abas de todas as coleções por título, endereço e contexto. O nome da coleção no resultado permite localizá-la e expandi-la. Coleções que correspondem ao nome, às notas ou às etiquetas também aparecem, mesmo se estiverem vazias.
+
+### Grupos do Chrome
+
+Novos salvamentos preservam nome, cor e estado recolhido dos grupos. A extensão requer a permissão `tabGroups`; recarregue a extensão após atualizar. Coleções antigas continuam funcionando sem grupos. Ao restaurar, somente páginas novas entram nos grupos recriados; páginas que já estão abertas não são movidas. Selecionar parte das abas recria apenas os grupos necessários. Se um grupo não puder ser recriado, a página continua aberta e a interface informa a falha.
+
+Referências: [Chrome tabGroups](https://developer.chrome.com/docs/extensions/reference/api/tabGroups) e [Chrome tabs](https://developer.chrome.com/docs/extensions/reference/api/tabs).
+
+### Recuperação automática local
+
+Antes de alterar coleções ou a lixeira, o TabSaver grava uma cópia do estado anterior na mesma operação de armazenamento. Isso também se aplica a restaurações de backup e salvamentos pelo menu de contexto. Em **Recuperação local**, escolha uma cópia e confirme para restaurar coleções e lixeira. As abas abertas e as preferências não são alteradas. A restauração cria uma cópia do estado atual antes de substituí-lo.
+
+São mantidas até cinco cópias recentes. O histórico é reduzido quando ultrapassa aproximadamente 4 MiB, preservando ao menos a cópia mais recente. Se não houver espaço para salvar a cópia e a alteração juntas, a operação falha e os dados atuais são mantidos. O histórico local não é incluído na exportação JSON, que contém o estado atual. Essas cópias não protegem contra desinstalação ou perda do perfil: mantenha também backups exportados.
+
+### Densidade da interface
+
+No topo, escolha **Confortável** (padrão) ou **Compacto**. A preferência persiste no navegador e acompanha as exportações de backup. Backups antigos continuam compatíveis; ao restaurar suas preferências, a ausência dessa opção usa o modo confortável.

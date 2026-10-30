@@ -1,0 +1,22 @@
+{
+  "features": ["select saved tabs", "cancellable restoration batches", "pinned collections", "collection notes", "global tab search", "Chrome tab group metadata", "automatic local recovery", "optional compact density"],
+  "screenshots": [
+    {"file":"collections-upgrades-desktop.png","viewport":"1440x1000","theme":"light","density":"compact"},
+    {"file":"collections-upgrades-mobile-dark.png","viewport":"390x844","theme":"dark","density":"compact","horizontalOverflow":false}
+  ],
+  "browserChecks": [
+    "Selecting one saved tab opens only that URL; all three saved tabs remain stored",
+    "Global title search finds a page in another collection; clicking its collection reveals and expands it",
+    "Empty collections remain discoverable by name",
+    "Editing notes creates a recovery point containing the original data",
+    "Cancelling recovery leaves the edited notes unchanged",
+    "Confirming recovery restores old notes, captures the replaced state, and neither opens nor closes tabs",
+    "Opening a twelve-tab collection requires confirmation and initially opens five tabs",
+    "Cancelling during the batch pause keeps the number of opened tabs at five; twelve tabs remain stored",
+    "Newly opened tabs share a recreated group with the stored title, color and collapsed state",
+    "Compact density persists in Chrome storage and reduced a sample narrow-screen card from about 242px to 214px",
+    "No horizontal overflow at 390px and no console errors in the final search check"
+  ],
+  "automatedValidation": "39 automated tests; production build and strict TypeScript checks for changed modules",
+  "limitations": ["Chrome API behavior was exercised through mocks; native group creation in an installed Chrome extension was not manually exercised.","Batching reduces bursts of page creation but does not guarantee low memory use after all pages are opened."]
+}
