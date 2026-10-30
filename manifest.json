@@ -45,5 +45,6 @@
       },
       "description": "Salvar as abas da janela em uma nova coleção, com confirmação antes de fechar"
     }
-  }
+  },
+  "minimum_chrome_version": "111"
 }
