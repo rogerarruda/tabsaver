@@ -1,5 +1,7 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  'Resultados em todas as coleções': 'Results across all collections',
+  'Mostrar mais resultados': 'Show more results',
   'Notas': 'Notes',
   'Editar coleção': 'Edit collection',
   'Salvar alterações': 'Save changes',

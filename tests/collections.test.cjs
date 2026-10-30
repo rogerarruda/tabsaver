@@ -109,3 +109,15 @@ test('notes round-trip, can be cleared, and preserve legacy raw tabs', () => {
   assert.deepEqual(changed.tabs, {tab})
   assert.equal(changed.pinned, true)
 })
+
+test('global search matches multiple terms across all collection tabs without modifying data', () => {
+  const collections = readCollections([{name:'Trabalho', notes:'Retomar autenticação', tags:['projeto'], tabs:[{title:'API Reference',url:'https://docs.example/auth'}]}, {name:'Other',tabs:[tab]}])
+  const result = api.searchSavedTabs(collections, ' API  auth ')
+  assert.equal(result.length, 1)
+  assert.equal(result[0].index, 0)
+  assert.equal(result[0].collection.name, 'Trabalho')
+  assert.equal(api.searchSavedTabs(collections, 'projeto').length, 1)
+  assert.equal(api.searchSavedTabs(collections, 'example').length, 2)
+  assert.equal(api.searchSavedTabs(collections, '   ').length, 0)
+  assert.equal(collections[0].tabs.length, 1)
+})

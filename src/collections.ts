@@ -103,3 +103,12 @@ export function recentCollections(collections: Collection[]): Collection[] {
 }
 
 export function pinFirst(collections: Collection[]): Collection[] { return [...collections].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned)) }
+
+export function searchSavedTabs(collections: Collection[], query: string) {
+  const words = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)
+  if (!words.length) return []
+  return collections.flatMap(collection => collection.tabs.flatMap((tab, index) => {
+    const text = `${tab.title} ${tab.url} ${collection.name} ${collection.notes || ''} ${(collection.tags || []).join(' ')}`.toLocaleLowerCase()
+    return words.every(word => text.includes(word)) ? [{ collection, tab, index }] : []
+  }))
+}
