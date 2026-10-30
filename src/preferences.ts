@@ -3,13 +3,14 @@ import { english } from './translations'
 
 type Language = 'auto' | 'pt-BR' | 'en'
 type Theme = 'system' | 'light' | 'dark'
-type Preferences = { language: Language; theme: Theme }
+type Preferences = { language: Language; theme: Theme; density: 'comfortable' | 'compact' }
 const cacheKey = 'tabsaver-preferences'
-const defaults: Preferences = { language: 'auto', theme: 'system' }
+const defaults: Preferences = { language: 'auto', theme: 'system', density: 'comfortable' }
 function normalize(value: unknown): Preferences {
   const input = value as Partial<Preferences> | null
   return {
     language: ['auto', 'pt-BR', 'en'].includes(input?.language || '') ? input!.language! : 'auto',
+    density: input?.density === 'compact' ? 'compact' : 'comfortable',
     theme: ['system', 'light', 'dark'].includes(input?.theme || '') ? input!.theme! : 'system',
   }
 }
@@ -22,6 +23,7 @@ export function usePreferences(onError: (message: string) => void) {
   const initial = cachedPreferences()
   const language = ref<Language>(initial.language)
   const theme = ref<Theme>(initial.theme)
+  const density = ref(initial.density)
   const browserLanguage = ref(navigator.language)
   const media = window.matchMedia('(prefers-color-scheme: dark)')
   const systemDark = ref(media.matches)
@@ -34,6 +36,7 @@ export function usePreferences(onError: (message: string) => void) {
   }
   watchEffect(() => {
     document.documentElement.dataset.theme = resolvedTheme.value
+    document.documentElement.dataset.density = density.value
     document.documentElement.lang = locale.value
     document.title = t('TabSaver · Seu espaço de volta')
   })
@@ -44,12 +47,13 @@ export function usePreferences(onError: (message: string) => void) {
     applying = true
     language.value = next.language
     theme.value = next.theme
+    density.value = next.density
     applying = false
     try { localStorage.setItem(cacheKey, JSON.stringify(next)) } catch { /* Chrome storage remains authoritative. */ }
   }
-  watch([language, theme], () => {
+  watch([language, theme, density], () => {
     if (applying) return
-    const next = { language: language.value, theme: theme.value }
+    const next = { language: language.value, theme: theme.value, density: density.value }
     pendingWrite = pendingWrite.then(async () => {
       try {
         if (extension) await chrome.storage.local.set({ preferences: next })
@@ -82,5 +86,5 @@ export function usePreferences(onError: (message: string) => void) {
     try { const data = await chrome.storage.local.get({ preferences: defaults }); apply(data.preferences) }
     catch { onError(t('Não foi possível carregar suas preferências.')) }
   }
-  return { language, theme, locale, t, loadPreferences, applyPreferences: apply, flushPreferences: () => pendingWrite }
+  return { language, theme, density, locale, t, loadPreferences, applyPreferences: apply, flushPreferences: () => pendingWrite }
 }

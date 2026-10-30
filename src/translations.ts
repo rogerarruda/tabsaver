@@ -1,5 +1,8 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  'Densidade da interface': 'Interface density',
+  'Confortável': 'Comfortable',
+  'Compacto': 'Compact',
   'Recuperação local': 'Local recovery',
   'Não foi possível carregar os pontos de recuperação.': 'Could not load recovery points.',
   'Restaurar este ponto de recuperação?': 'Restore this recovery point?',

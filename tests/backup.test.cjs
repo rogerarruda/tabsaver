@@ -63,3 +63,10 @@ test('backup fingerprints ignore object key order and detect actual changes', as
   assert.equal(a.length, 64)
   assert.notEqual(a, await api.backupFingerprint({ ...snapshot, collections: [] }))
 })
+
+test('compact density round-trips in backups and old backups remain valid', () => {
+  const compact = {...snapshot, preferences:{...prefs,density:'compact'}}
+  assert.equal(api.parseBackup(JSON.stringify(api.createBackup(compact))).preferences.density, 'compact')
+  assert.equal(api.parseBackup(JSON.stringify(api.createBackup(snapshot))).preferences.density, undefined)
+  assert.throws(() => api.createBackup({...snapshot, preferences:{...prefs,density:'invalid'}}))
+})
