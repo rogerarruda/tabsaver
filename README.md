@@ -201,6 +201,7 @@ Comandos disponíveis:
 | `npm start` | Inicia a extensão em modo de produção pela ferramenta de desenvolvimento. |
 | `npm run build` | Gera o build de produção em `dist/chrome`. |
 | `npm test` | Gera o build e executa os testes automatizados. |
+| `npm run release:check -- vX.Y.Z` | Confere se a tag e as versões do projeto estão alinhadas. |
 
 Estrutura principal:
 
@@ -209,7 +210,8 @@ src/                  Interface, armazenamento e funcionalidades
 src/background.ts     Ícone, menu de contexto e comandos de teclado
 src/translations.ts   Traduções PT-BR → EN
 images/               Logo e ícones da extensão
-scripts/              Inclusão da licença e da privacidade no build
+scripts/              Documentos do build e validação de versões
+.github/              CI, releases e atualizações de dependências
 manifest.json         Manifesto de origem
 tests/               Testes de dados e APIs simuladas
 design-review/        Capturas com dados fictícios e registros de revisão
@@ -229,6 +231,44 @@ zip -r ../../tabsaver-chrome.zip .
 ```
 
 O build inclui `LICENSE` e `PRIVACY.md` automaticamente. Esse é o pacote compilado para uma release ou para o fluxo de envio à loja. Não inclua `node_modules`, backups pessoais ou o repositório inteiro. A publicação na Chrome Web Store depende também do cadastro, dos materiais da listagem e da revisão da plataforma; gerar o ZIP não publica a extensão.
+
+### Releases automáticas no GitHub
+
+O workflow [Release](.github/workflows/release.yml) roda quando uma tag `vX.Y.Z` é enviada ao GitHub. Ele valida as versões, instala as dependências com `npm ci`, executa os testes, gera o build e publica uma release com:
+
+- `tabsaver-chrome-vX.Y.Z.zip`: extensão compilada, com o manifesto na raiz, licença e política de privacidade.
+- `SHA256SUMS.txt`: soma SHA-256 do ZIP para conferir a integridade do download.
+- Notas geradas pelo GitHub e instruções breves de instalação.
+
+Para publicar a versão atual, depois de revisar e enviar os commits que contêm esta configuração:
+
+```bash
+git switch develop
+npm run release:check -- v0.0.2
+git push origin develop
+git tag -a v0.0.2 -m "TabSaver v0.0.2"
+git push origin v0.0.2
+```
+
+Acompanhe a execução na aba **Actions** e o resultado em [Releases](https://github.com/rogerarruda/tabsaver/releases). Criar uma tag apenas no computador não inicia a automação; é necessário enviá-la ao GitHub.
+
+Para a próxima versão, atualize `package.json`, `package-lock.json` (incluindo a versão raiz) e `manifest.json` para o mesmo número, faça o commit e envie uma nova tag correspondente. `npm version patch --no-git-tag-version` atualiza os arquivos npm; o manifesto precisa ser atualizado também. Confirme o número final com `npm run release:check -- vX.Y.Z` antes de criar a tag.
+
+O fluxo aceita versões estáveis com três números, como `v0.0.3`. Uma tag diferente das versões dos arquivos interrompe a publicação. Uma release existente não é sobrescrita: use uma nova versão para novos pacotes.
+
+Não é necessário cadastrar um token pessoal: o workflow usa o `GITHUB_TOKEN` fornecido pelo GitHub, com permissão de escrita apenas no job de publicação. O repositório precisa permitir GitHub Actions e criação de releases. Esta automação não publica na Chrome Web Store.
+
+Referência: [criação de releases pelo GitHub CLI](https://cli.github.com/manual/gh_release_create).
+
+### CI e Dependabot
+
+O workflow [CI](.github/workflows/ci.yml) executa o build e os testes em pushes e pull requests para `main` e `develop`, incluindo PRs de dependências.
+
+A configuração [Dependabot](.github/dependabot.yml) verifica dependências npm e GitHub Actions semanalmente, às segundas-feiras às 09h no fuso de São Paulo. Os PRs de atualização de versão são direcionados para `develop`, com limite de cinco PRs abertos por ecossistema. Atualizações menores e correções são agrupadas; versões principais são abertas separadamente para revisão. Não há mesclagem automática.
+
+Para ativar o Dependabot, esta configuração precisa estar também na **branch padrão do repositório**, atualmente `main`, mesmo que os PRs tenham `develop` como destino. Leve os arquivos para `main` pelo fluxo normal de revisão. Nas configurações de segurança do repositório, habilite também **Dependabot alerts** e **Dependabot security updates** se quiser alertas e correções automáticas de vulnerabilidades; essas correções usam a branch padrão e não seguem necessariamente o agendamento de atualização de versões.
+
+Referência: [configuração oficial do Dependabot](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference).
 
 ### Contribuir
 
