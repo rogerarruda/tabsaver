@@ -1,5 +1,7 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  'Desafixar coleção': 'Unpin collection',
+  'Fixar coleção no topo': 'Pin collection to top',
   'Abrindo abas: {count} de {total}. Em lotes de 5.': 'Opening tabs: {count} of {total}. In batches of 5.',
   'Interromper abertura': 'Stop opening tabs',
   'Abertura interrompida. Abas abertas: {count}.': 'Stopped opening tabs. Tabs opened: {count}.',

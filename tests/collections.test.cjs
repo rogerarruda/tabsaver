@@ -87,3 +87,14 @@ test('destination options sort by descending creation date without mutating the 
   assert.deepEqual(api.recentCollections(collections).map(c => c.name), ['New', 'Old', 'Unknown'])
   assert.equal(collections[0].name, 'Old')
 })
+
+test('pin metadata survives legacy edits and moves pinned collections first without mutation', () => {
+  const data = [{name:'Old', date:'2025', tabs:{tab}, custom:42}, {name:'Pinned', tabs:[], pinned:true}]
+  const parsed = readCollections(data)
+  assert.equal(api.pinFirst(parsed)[0].name, 'Pinned')
+  assert.equal(parsed[0].name, 'Old')
+  const stored = writeCollections([{...parsed[0], pinned:true, metadataChanged:true}])[0]
+  assert.equal(stored.pinned, true)
+  assert.deepEqual(stored.tabs, {tab})
+  assert.equal(stored.custom, 42)
+})
