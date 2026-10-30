@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch, onMounted, onBeforeUnmount } from 'vue'
-import { ArrowDownToLine, Upload, X, ShieldCheck, RotateCcw } from 'lucide-vue-next'
+import { ArrowDownToLine, Upload, X, ShieldCheck, RotateCcw } from '@lucide/vue'
 import { createBackup, parseBackup, mergeCollections, summarizeBackup, readBackupStorage, writeBackupStorage, validateSnapshot, backupFingerprint, readBackupMarker, writeBackupMarker, markBackupExport } from './backup'
 import { mergeTrash } from './trash'
 import type { Backup, Snapshot } from './backup'

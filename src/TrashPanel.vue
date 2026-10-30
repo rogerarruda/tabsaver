@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Trash2, RotateCcw, Folder, File } from 'lucide-vue-next'
+import { Trash2, RotateCcw, Folder, File } from '@lucide/vue'
 import type { TrashEntry } from './trash'
 import { readCollections } from './collections'
 const props = defineProps<{ entries: TrashEntry[]; t: (text: string) => string; locale: string; busy: boolean }>()

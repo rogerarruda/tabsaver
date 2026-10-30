@@ -189,7 +189,7 @@ Ao reabrir uma página ou visitar o site do desenvolvedor, o navegador acessa o 
 
 ## Desenvolvimento
 
-O projeto usa **Vue 3, TypeScript, Lucide e Extension.js**, com Manifest V3. A versão da ferramenta de build e as dependências resolvidas estão fixadas no projeto. Os comandos do Extension.js usam `--no-telemetry` para desativar a telemetria da ferramenta.
+O projeto usa **Vue 3, TypeScript, Lucide (`@lucide/vue`) e Extension.js**, com Manifest V3. A versão da ferramenta de build e as dependências resolvidas estão fixadas no projeto. Os comandos do Extension.js usam `--no-telemetry` para desativar a telemetria da ferramenta.
 
 ```bash
 git switch develop

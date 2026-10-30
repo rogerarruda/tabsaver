@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { ChevronDown, Search, Plus, Folder } from 'lucide-vue-next'
+import { ChevronDown, Search, Plus, Folder } from '@lucide/vue'
 import { recentCollections } from './collections'
 import type { Collection } from './collections'
 const props = defineProps<{ modelValue: string; collections: Collection[]; t: (text: string) => string; label: string; allowNew?: boolean; excludedKey?: string; disabled?: boolean }>()

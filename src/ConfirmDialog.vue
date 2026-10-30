@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { AlertTriangle } from 'lucide-vue-next'
+import { AlertTriangle } from '@lucide/vue'
 import type { Confirmation } from './confirmation'
 const props = defineProps<{ options: Confirmation; cancelLabel: string; returnFocus?: HTMLElement | null }>()
 const emit = defineEmits<{ result: [confirmed: boolean] }>()
