@@ -27,7 +27,8 @@
     "start": "extension start",
     "build": "extension build",
     "test": "npm run build && node --test tests/*.test.cjs",
-    "postbuild": "node scripts/copy-release-docs.cjs"
+    "postbuild": "node scripts/copy-release-docs.cjs",
+    "release:check": "node scripts/validate-release.cjs"
   },
   "repository": {
     "type": "git",
