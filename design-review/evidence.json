@@ -1,0 +1,57 @@
+{
+  "contract": "Nova aba TabSaver: ferramenta calma com navegação lateral, resumo, coleções pesquisáveis e painel de abas abertas; ação principal Salvar e liberar abas; preservar chrome.storage.local.collections e estrutura name/tabs/date; viewports 1440x900 e 390x844.",
+  "targetViewports": [
+    "1440x900",
+    "390x844"
+  ],
+  "accessibility": {
+    "status": "untested",
+    "evidence": "Foco automático, contenção de Tab e Escape no diálogo verificados no navegador. Labels e foco visível implementados. Contraste completo e leitor de tela não auditados."
+  },
+  "responsive": {
+    "status": "pass",
+    "evidence": "Inspeção renderizada em 1440x900 e 390x844, sem overflow horizontal; nomes longos quebram linha."
+  },
+  "contentStates": {
+    "loading": {
+      "status": "untested",
+      "evidence": "Estado implementado, não inspecionado com armazenamento lento."
+    },
+    "empty": {
+      "status": "pass",
+      "evidence": "Coleções vazias e busca sem resultados conferidas no navegador."
+    },
+    "error": {
+      "status": "untested",
+      "evidence": "Mensagens implementadas para falhas de armazenamento e abas; falhas não injetadas na API Chrome real."
+    },
+    "partial": {
+      "status": "pass",
+      "evidence": "Coleções com título longo e coleção vazia renderizadas. Sem API Chrome, prévia explicita limitação."
+    },
+    "success": {
+      "status": "pass",
+      "evidence": "Criação de coleção persistiu na prévia e exibiu confirmação. Busca por github retornou uma coleção."
+    },
+    "permission": {
+      "status": "not-applicable",
+      "reason": "Nenhuma nova permissão adicionada; tabs e storage já constavam do manifesto."
+    }
+  },
+  "renderedEvidence": [
+    {
+      "viewport": "1440x900",
+      "artifact": "desktop.png",
+      "observation": "Tela desktop com dados fictícios apenas no localStorage da prévia, navegação e cartões."
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "mobile.png",
+      "observation": "Tela estreita sem overflow e com nomes longos quebrando linha."
+    }
+  ],
+  "limitations": [
+    "Fluxos de abrir, fechar e salvar abas ainda precisam de teste em uma extensão carregada no Chrome.",
+    "Capturas usam dados fictícios de prévia, sem modificar armazenamento da extensão."
+  ]
+}

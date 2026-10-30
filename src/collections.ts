@@ -1,0 +1,123 @@
+export type SavedGroup = { key: string; title: string; color: chrome.tabGroups.ColorEnum; collapsed: boolean }
+export type Tab = { id?: number; title: string; url: string; group?: SavedGroup }
+const groupColors = ['grey', 'blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange']
+function readGroup(value: unknown): SavedGroup | undefined {
+  const group = value as Partial<SavedGroup> | null
+  if (!group || typeof group.key !== 'string' || !group.key || typeof group.title !== 'string' || !groupColors.includes(group.color || '') || typeof group.collapsed !== 'boolean') return
+  return { key: group.key, title: group.title, color: group.color!, collapsed: group.collapsed }
+}
+export function savedTab(tab: Tab): Tab { return { title: tab.title, url: tab.url, ...(tab.group ? { group: { ...tab.group } } : {}) } }
+
+export type Collection = { name: string; tabs: Tab[]; date: string; key?: string; source?: unknown; renamed?: boolean; unreadableTabs?: boolean; tabsChanged?: boolean; notes?: string; pinned?: boolean; favorite?: boolean; tags?: string[]; metadataChanged?: boolean }
+const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value)
+
+function readTabs(input: unknown): { tabs: Tab[]; unreadable: boolean } {
+  let value = input
+  if (typeof value === 'string') {
+    try { value = JSON.parse(value) } catch { return { tabs: [], unreadable: true } }
+  }
+  if (value === undefined || value === null) return { tabs: [], unreadable: value === null }
+  if (record(value)) value = typeof value.url === 'string' ? [value] : Object.values(value)
+  if (!Array.isArray(value)) return { tabs: [], unreadable: true }
+  const tabs: Tab[] = []
+  let unreadable = false
+  for (const item of value) {
+    if (record(item) && typeof item.url === 'string' && item.url.trim()) {
+      tabs.push({ url: item.url, title: typeof item.title === 'string' && item.title ? item.title : item.url, ...(readGroup(item.group) ? { group: readGroup(item.group) } : {}) })
+    } else if (typeof item === 'string' && /^https?:\/\//i.test(item)) {
+      tabs.push({ url: item, title: item })
+    } else unreadable = true
+  }
+  return { tabs, unreadable }
+}
+
+// Normalize the view only. Keep every original entry for subsequent writes.
+export function readCollections(input: unknown): Collection[] {
+  if (!Array.isArray(input)) throw new Error('Invalid collections container')
+  return input.map((source, index) => {
+    const data = record(source) ? source : {}
+    const result = readTabs(data.tabs)
+    return {
+      name: typeof data.name === 'string' ? data.name : `Collection ${index + 1}`,
+      date: typeof data.date === 'string' ? data.date : typeof data.date === 'number' && Number.isFinite(new Date(data.date).getTime()) ? new Date(data.date).toISOString() : '',
+      tabs: result.tabs,
+      notes: typeof data.notes === 'string' ? data.notes : '',
+      pinned: data.pinned === true,
+      favorite: data.favorite === true,
+      tags: Array.isArray(data.tags) ? data.tags.filter((tag): tag is string => typeof tag === 'string') : [],
+      key: `stored-${index}`,
+      source,
+      unreadableTabs: !record(source) || result.unreadable,
+    }
+  })
+}
+
+export function writeCollections(collections: Collection[]): unknown[] {
+  return collections.map(collection => {
+    if (Object.prototype.hasOwnProperty.call(collection, 'source')) {
+      if (record(collection.source)) return { ...collection.source, ...(collection.renamed ? { name: collection.name } : {}), ...(collection.tabsChanged ? { tabs: collection.tabs } : {}), ...(collection.metadataChanged ? { ...(collection.notes || 'notes' in collection.source ? { notes: collection.notes || '' } : {}), ...(collection.pinned || 'pinned' in collection.source ? { pinned: !!collection.pinned } : {}), favorite: !!collection.favorite, tags: collection.tags || [] } : {}) }
+      return collection.source
+    }
+    return { name: collection.name, tabs: collection.tabs, date: collection.date, ...(collection.tags?.length ? { tags: collection.tags } : {}), ...(collection.favorite ? { favorite: true } : {}), ...(collection.pinned ? { pinned: true } : {}), ...(collection.notes ? { notes: collection.notes } : {}) }
+  })
+}
+
+export function appendTabs(collection: Collection, tabs: Tab[]): Collection {
+  if (collection.unreadableTabs) throw new Error('Unreadable legacy tabs')
+  return { ...collection, tabs: [...collection.tabs, ...tabs.map(savedTab)], tabsChanged: true }
+}
+
+export function replaceTabs(collection: Collection, tabs: Tab[]): Collection {
+  if (collection.unreadableTabs) throw new Error('Unreadable legacy tabs')
+  return { ...collection, tabs, tabsChanged: true }
+}
+export function moveSavedTab(collections: Collection[], fromKey: string, toKey: string, index: number): Collection[] {
+  const source = collections.find(c => c.key === fromKey), target = collections.find(c => c.key === toKey)
+  if (!source || !target || fromKey === toKey || !source.tabs[index]) throw new Error('Invalid move')
+  const from = replaceTabs(source, source.tabs.filter((_, i) => i !== index))
+  const to = appendTabs(target, [source.tabs[index]])
+  return collections.map(c => c.key === fromKey ? from : c.key === toKey ? to : c)
+}
+export function manualTab(title: string, address: string): Tab {
+  const url = new URL(address.trim())
+  if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Invalid URL')
+  return { title: title.trim() || url.hostname, url: url.href }
+}
+
+export function parseTags(text: string): string[] {
+  const seen = new Set<string>()
+  return text.split(',').map(tag => tag.trim().slice(0, 40)).filter(tag => { const key = tag.toLocaleLowerCase(); if (!tag || seen.has(key)) return false; seen.add(key); return true }).slice(0, 20)
+}
+
+export function urlKey(address: string): string {
+  try { return new URL(address).href } catch { return address }
+}
+export function uniqueTabs(tabs: Tab[], existing: Tab[] = []): Tab[] {
+  const seen = new Set(existing.map(tab => urlKey(tab.url)))
+  return tabs.filter(tab => { const key = urlKey(tab.url); if (seen.has(key)) return false; seen.add(key); return true })
+}
+
+export function quickSave(collections: unknown[], tab: Tab, name: string): unknown[] {
+  const result = [...collections]
+  const index = result.findIndex(item => record(item) && item.quickSave === true)
+  if (index < 0) return [...result, { name, date: new Date().toISOString(), tabs: [{ title: tab.title, url: tab.url }], quickSave: true }]
+  const collection = readCollections([result[index]])[0]
+  result[index] = writeCollections([appendTabs(collection, uniqueTabs([tab], collection.tabs))])[0]
+  return result
+}
+
+export function recentCollections(collections: Collection[]): Collection[] {
+  const time = (date: string) => Number.isFinite(Date.parse(date)) ? Date.parse(date) : -Infinity
+  return [...collections].sort((a, b) => time(b.date) - time(a.date))
+}
+
+export function pinFirst(collections: Collection[]): Collection[] { return [...collections].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned)) }
+
+export function searchSavedTabs(collections: Collection[], query: string) {
+  const words = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)
+  if (!words.length) return []
+  return collections.flatMap(collection => collection.tabs.flatMap((tab, index) => {
+    const text = `${tab.title} ${tab.url} ${collection.name} ${collection.notes || ''} ${(collection.tags || []).join(' ')}`.toLocaleLowerCase()
+    return words.every(word => text.includes(word)) ? [{ collection, tab, index }] : []
+  }))
+}

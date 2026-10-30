@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Validate, test and package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Validate release version
+        id: version
+        run: npm run release:check
+      - run: npm ci
+      - run: npm test
+      - name: Package the Chrome extension
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          (cd dist/chrome && zip -q -r "$GITHUB_WORKSPACE/release/tabsaver-chrome-${RELEASE_TAG}.zip" .)
+          cd release
+          sha256sum "tabsaver-chrome-${RELEASE_TAG}.zip" > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-assets
+          path: release/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-assets
+          path: release
+      - name: Publish release and attach files
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+          RELEASE_COMMIT: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag_refs="$(gh api "repos/$GH_REPO/git/matching-refs/tags/$RELEASE_TAG" --jq '.[].ref')"
+          while IFS= read -r tag_ref; do
+            if [[ "$tag_ref" == "refs/tags/$RELEASE_TAG" ]]; then
+              tag_commit="$(gh api "repos/$GH_REPO/commits/$RELEASE_TAG" --jq '.sha')"
+              if [[ "$tag_commit" != "$RELEASE_COMMIT" ]]; then
+                echo "A tag já existe em outro commit. Incremente a versão antes de publicar." >&2
+                exit 1
+              fi
+            fi
+          done <<< "$tag_refs"
+          gh release create "$RELEASE_TAG" \
+            "release/tabsaver-chrome-${RELEASE_TAG}.zip" \
+            release/SHA256SUMS.txt \
+            --repo "$GH_REPO" \
+            --target "$RELEASE_COMMIT" \
+            --title "TabSaver ${RELEASE_TAG}" \
+            --generate-notes \
+            --notes 'Para instalar no Chrome, baixe o arquivo tabsaver-chrome desta release, extraia o ZIP e carregue a pasta em chrome://extensions usando Carregar sem compactação. Consulte o README para instruções completas. Os arquivos Source code são o código-fonte e precisam ser compilados.'

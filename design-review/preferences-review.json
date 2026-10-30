@@ -1,0 +1,27 @@
+{
+  "contract": "Preservar a interface TabSaver; idioma auto/pt-BR/en e aparência system/light/dark em seletores acessíveis no topo. Defaults seguem navegador e sistema. Não alterar coleções existentes.",
+  "browserChecks": {
+    "automaticPortuguese": "pt-PT e pt-BR resolvem pt-BR",
+    "automaticEnglish": "en-US resolve en",
+    "unsupportedLanguage": "de-DE resolve en",
+    "manualLanguage": "pt-BR prevalece com navegador em alemão",
+    "reload": "English e Dark permaneceram após recarga",
+    "systemTheme": "system seguiu emulações light e dark sem recarga",
+    "manualTheme": "dark prevaleceu sobre sistema claro e light sobre sistema escuro",
+    "dates": "Oct 29, 2026 em en e 29 de out. de 2026 em pt-BR",
+    "dialog": "Diálogo em inglês, foco inicial no nome, superfície escura",
+    "responsive": "Sem overflow em 1440x900 e 390x844"
+  },
+  "build": "npm run build passou",
+  "newModuleTypeCheck": "tsc direcionado a preferences.ts e translations.ts passou",
+  "knownLimits": [
+    "Checagem geral de tipos encontra erros anteriores: declaração Vue e extension-fixtures ausentes.",
+    "Persistência chrome.storage e propagação entre páginas da extensão ainda não testadas com extensão instalada; persistência da prévia verificada."
+  ],
+  "artifacts": [
+    "dark-en-desktop.png",
+    "dark-pt-desktop.png",
+    "dark-en-mobile.png",
+    "dark-en-dialog.png"
+  ]
+}

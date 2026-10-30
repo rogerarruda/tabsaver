@@ -1,14 +1,49 @@
 {
   "$schema": "https://json.schemastore.org/chrome-manifest.json",
   "manifest_version": 3,
-  "version": "0.0.1",
+  "version": "1.0.0",
   "name": "tabsaver",
-  "description": "An Extension.js example.",
+  "description": "Salve e organize suas abas em coleções, libere memória do navegador e retome de onde parou.",
   "icons": {
-    "48": "images/extension_48.png"
+    "16": "images/tabsaver-16.png",
+    "32": "images/tabsaver-32.png",
+    "48": "images/tabsaver-48.png",
+    "128": "images/tabsaver-128.png"
+  },
+  "permissions": [
+    "tabs",
+    "storage",
+    "favicon",
+    "contextMenus",
+    "tabGroups"
+  ],
+  "action": {
+    "default_title": "Abrir TabSaver",
+    "default_icon": {
+      "16": "images/tabsaver-16.png",
+      "32": "images/tabsaver-32.png"
+    }
+  },
+  "background": {
+    "service_worker": "src/background.ts"
   },
   "chrome_url_overrides": {
-    "newtab": "newtab/index.html"
+    "newtab": "src/index.html"
   },
-  "author": "Your Name"
+  "author": "Roger Arruda",
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+T",
+        "mac": "Alt+Shift+T"
+      }
+    },
+    "quick-save-tabs": {
+      "suggested_key": {
+        "default": "Alt+Shift+S",
+        "mac": "Alt+Shift+S"
+      },
+      "description": "Salvar as abas da janela em uma nova coleção, com confirmação antes de fechar"
+    }
+  }
 }
