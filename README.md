@@ -1,242 +1,243 @@
-# tabsaver
+# TabSaver
 
-> An Extension.js example.
+**Menos abas. Mais espaço.**
 
-## Available Scripts
+TabSaver é uma extensão open source para Chrome que salva suas abas em coleções locais, permite fechá-las para liberar recursos e ajuda a retomar o trabalho depois. Sem conta, sem servidor e sem sincronização obrigatória.
 
-In the project directory, you can run the following scripts:
+Desenvolvido por [Roger Arruda](https://rogerarruda.dev) · [Licença MIT](LICENSE) · [Privacidade](PRIVACY.md) · [Reportar um problema](https://github.com/rogerarruda/tabsaver/issues)
 
-### npm dev
+![Interface do TabSaver com coleções, painel de abas abertas e backups na barra lateral. Dados fictícios.](design-review/sidebar-backup-desktop.png)
 
-**Development Mode**: This command runs your extension in development mode. It will launch a new browser instance with your extension loaded. The page will automatically reload whenever you make changes to your code, allowing for a smooth development experience.
+## Recursos
+
+- Coleções com nomes, notas, etiquetas, favoritos e opção de fixar no topo.
+- Salvamento de todas as abas da janela ou apenas das selecionadas, em coleções novas ou existentes.
+- Fechamento opcional após salvar, com confirmação antes de fechar.
+- Salvamento rápido pelo botão com raio, atalhos de teclado e menu de contexto.
+- Busca global por título, endereço, nome da coleção, notas ou etiquetas.
+- Reabertura de uma coleção inteira ou apenas das abas escolhidas, em lotes com progresso e interrupção.
+- Preservação de nome, cor e estado recolhido dos grupos do Chrome em novos salvamentos.
+- Movimentação de abas por arrastar e soltar ou pela opção **Mover para**.
+- Lixeira para restaurar abas e coleções removidas.
+- Backup e restauração por JSON, com recuperação automática local.
+- Português (Brasil) e inglês, temas claro/escuro e densidade confortável/compacta.
+
+## Instalação
+
+A instalação descrita aqui é manual. A opção pela Chrome Web Store será adicionada quando estiver disponível. Use somente builds de uma origem em que você confia.
+
+### Opção 1: instalar um build pronto
+
+Se houver um pacote compilado para Chrome em [Releases](https://github.com/rogerarruda/tabsaver/releases):
+
+1. Baixe o arquivo do **build da extensão** e extraia o ZIP para uma pasta permanente.
+2. No Chrome, abra `chrome://extensions`.
+3. Ative **Modo do desenvolvedor**.
+4. Clique em **Carregar sem compactação** (*Load unpacked*).
+5. Selecione a pasta que contém o `manifest.json` **compilado**.
+6. Abra o TabSaver pelo ícone no menu de extensões ou abra uma nova aba.
+
+Não selecione o ZIP nem o arquivo `manifest.json` individualmente. Os arquivos automáticos **Source code (zip/tar.gz)** do GitHub contêm o código-fonte e precisam ser compilados usando a opção abaixo.
+
+### Opção 2: compilar a partir do código-fonte (*from source*)
+
+Requisitos: **Git, Node.js 22 ou superior, npm e Google Chrome**. O ambiente usado na validação foi Node.js 22 com npm 10. Não são necessários conta Google, API key, OAuth ou arquivo `.env`.
+
+A implementação atual está na branch `develop`:
 
 ```bash
-npm dev
+git clone --branch develop https://github.com/rogerarruda/tabsaver.git
+cd tabsaver
+npm ci
+npm run build
 ```
 
-### npm start
+Depois:
 
-**Production Preview**: This command runs your extension in production mode. It will launch a new browser instance with your extension loaded, simulating the environment and behavior of your extension as it will appear once published.
+1. Abra `chrome://extensions` e ative **Modo do desenvolvedor**.
+2. Clique em **Carregar sem compactação**.
+3. Selecione **`dist/chrome`** dentro do projeto.
+
+A pasta raiz do repositório contém TypeScript e Vue e não deve ser carregada diretamente como extensão. O build gera os arquivos executáveis e o manifesto ajustado em `dist/chrome`.
+
+O `package-lock.json` fixa as versões usadas na instalação. Use `npm ci` para reproduzir esse conjunto de dependências.
+
+### Atualizar uma instalação manual
+
+Antes de atualizar, exporte um backup pelo card **Salvo neste navegador**.
+
+- **Instalação por build:** substitua os arquivos na mesma pasta usada na instalação.
+- **Instalação pelo fonte:** atualize o código e execute `npm ci` e `npm run build` novamente.
+- Em `chrome://extensions`, clique em **Recarregar** no card do TabSaver e atualize as páginas da extensão que já estiverem abertas.
+
+Mantenha o mesmo perfil do Chrome e a mesma pasta de instalação. Remover a extensão para reinstalá-la pode apagar seus dados locais. Se instalar em outro perfil ou mudar de uma instalação manual para a futura versão da loja, use o backup exportado para transferir suas coleções.
+
+A instalação sem compactação segue o [guia oficial do Chrome](https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world#load-unpacked).
+
+## Como usar
+
+### Abrir o TabSaver
+
+Clique no ícone da extensão na barra do Chrome. Se necessário, use o menu de extensões para fixá-lo. O TabSaver também declara sua página como a nova aba do navegador.
+
+Se o Chrome solicitar confirmação para manter a nova página, aceite para usá-la. Caso outra extensão controle a nova aba ou você prefira sua página atual, o acesso pelo ícone continua funcionando. **Configurar nova aba** oferece instruções e acesso às configurações; não força uma mudança nas preferências do Chrome.
+
+O tutorial aparece na primeira visita e pode ser reaberto em **Como usar**.
+
+### Salvar abas
+
+1. No painel **Abas abertas**, marque as páginas que deseja guardar.
+2. Em **Salvar em**, escolha uma nova coleção ou busque uma existente.
+3. Escolha se deseja ignorar duplicatas e fechar as abas após salvar.
+4. Clique em **Salvar** e confirme o fechamento, se solicitado.
+
+As abas só são fechadas depois da gravação dos dados. A página do TabSaver permanece aberta.
+
+Para guardar a janela inteira, clique em **⚡ Salvar abas**, ao lado de **Nova coleção**. Esse atalho cria uma nova sessão, ignora duplicatas e pede confirmação antes de fechar. A seleção e as opções do painel não filtram o salvamento rápido.
+
+O menu de contexto do Chrome também permite salvar a página ou um link em **Salvos rápidos**, sem fechar a aba. Um selo `✓` no ícone indica sucesso e `!` indica falha.
+
+### Organizar e encontrar páginas
+
+- Crie coleções pelo botão **Nova coleção**.
+- Use o lápis para editar nome, etiquetas e notas.
+- A estrela marca favoritos; o alfinete mantém uma coleção no topo.
+- Em **Ver abas**, adicione um endereço HTTP/HTTPS, remova uma página ou mova-a para outra coleção. É possível arrastar pela alça para um cartão ou para uma coleção na barra lateral.
+- A busca encontra abas em todas as coleções. Clique no nome da coleção em um resultado para localizá-la e expandi-la.
+- Coleções e abas excluídas vão para a **Lixeira**, onde podem ser restauradas ou removidas definitivamente.
+
+### Reabrir abas
+
+Use **Abrir coleção** para abrir todas ou expanda **Ver abas**, marque as páginas e clique em **Abrir selecionadas**. Reabrir não remove as páginas da coleção.
+
+A abertura ocorre em segundo plano, em lotes de cinco, com uma pausa entre os lotes. **Interromper abertura** cancela as próximas aberturas e mantém as páginas já abertas. Dez ou mais novas abas exigem confirmação sobre o uso de recursos.
+
+Endereços já abertos na janela e duplicatas são ignorados. Apenas as páginas recém-abertas entram nos grupos recriados; abas existentes não são movidas.
+
+### Backup e recuperação
+
+Na barra lateral, expanda o card **Salvo neste navegador**. Em telas estreitas, esse card fica junto do logotipo, acima do conteúdo principal.
+
+| Ação | O que faz |
+| --- | --- |
+| **Exportar backup** | Prepara um JSON com coleções, notas, grupos salvos, preferências e lixeira. |
+| **Restaurar backup** | Abre um arquivo JSON do TabSaver de até 20 MB e mostra uma prévia antes de importar. |
+| **Adicionar às coleções atuais** | Mantém os dados existentes e adiciona os do backup, evitando coleções idênticas. |
+| **Substituir todas as coleções** | Troca as coleções pelas do arquivo. A restauração de preferências é opcional. |
+| **Desfazer restauração** | Recupera o estado anterior à última importação; alterações posteriores também são substituídas. |
+| **Recuperação local** | Permite escolher uma cópia automática anterior de coleções e lixeira. |
+
+Importar ou recuperar dados não abre nem fecha abas do navegador. Backups antigos sem lixeira continuam aceitos e mantêm a lixeira atual.
+
+Antes de alterar coleções ou a lixeira, a extensão guarda o estado anterior na mesma operação de armazenamento. São mantidas até cinco cópias recentes; bibliotecas grandes podem ter menos cópias para limitar o espaço ocupado. Restaurar uma cópia local também cria uma cópia do estado substituído. As preferências não são alteradas pela recuperação local.
+
+Essas cópias ficam no próprio navegador e não substituem arquivos exportados. O JSON é legível e não tem criptografia adicional. Guarde-o em um local seguro. O histórico automático e a cópia de desfazer não entram no arquivo exportado.
+
+O lembrete de backup pode ser adiado até o dia seguinte. **Última exportação preparada** informa quando o download foi iniciado, sem garantir que o arquivo tenha sido salvo pelo usuário.
+
+### Atalhos e preferências
+
+Atalhos sugeridos, sujeitos a conflitos e à atribuição do Chrome:
+
+| Atalho | Ação |
+| --- | --- |
+| `Alt + Shift + S` | Abre o salvamento rápido para confirmação. |
+| `Alt + Shift + T` | Abre o TabSaver. |
+
+No macOS, use **Option** no lugar de Alt. **Atalhos**, no topo da interface, mostra as combinações realmente atribuídas e oferece acesso a `chrome://extensions/shortcuts` para alterá-las.
+
+Também no topo:
+
+- **Idioma:** Automático, Português (BR) ou English. Automático usa PT-BR para navegadores em português e inglês para os demais idiomas.
+- **Aparência:** Sistema, Claro ou Escuro.
+- **Densidade:** Confortável ou Compacto.
+
+As preferências são salvas no navegador e acompanham os backups exportados.
+
+## Privacidade e permissões
+
+O TabSaver armazena seus dados no perfil local do Chrome. Não usa conta, anúncios, analytics, rastreamento nem envio de coleções para servidores. A sincronização com Google Drive ainda não está implementada.
+
+| Permissão | Finalidade |
+| --- | --- |
+| `tabs` | Ler títulos e endereços das abas da janela, salvar, reabrir e fechar páginas mediante as ações do usuário. |
+| `storage` | Guardar coleções, preferências, lixeira e cópias de recuperação localmente. |
+| `favicon` | Exibir ícones usando a API interna de favicons do Chrome, sem integrar um serviço externo de imagens. |
+| `contextMenus` | Oferecer as opções de salvar página ou link pelo menu de contexto. |
+| `tabGroups` | Ler e recriar nome, cor e estado recolhido dos grupos de abas. |
+
+A nova aba é declarada no manifesto por `chrome_url_overrides`. A extensão não solicita acesso ao conteúdo das páginas por scripts nem permissão de histórico de navegação.
+
+Ao reabrir uma página ou visitar o site do desenvolvedor, o navegador acessa o respectivo site normalmente. Dados locais, lixeira e arquivos de backup podem conter URLs pessoais ou sensíveis. Veja a [política de privacidade completa](PRIVACY.md).
+
+## Limitações
+
+- Os dados não são sincronizados entre dispositivos ou perfis. Não há integração ativa com Google Drive.
+- Fechar abas pode reduzir o consumo de recursos; não há medição de RAM nem garantia de uma economia específica. Reabrir muitas páginas continua podendo consumir bastante memória, mesmo em lotes.
+- São salvos endereços, títulos e metadados de organização. Formulários não enviados, posição de rolagem, histórico de voltar/avançar, login e estado interno das páginas não são preservados pelo TabSaver.
+- Links já abertos e duplicados são ignorados na restauração. Consultas e fragmentos diferentes são tratados como endereços distintos.
+- Algumas páginas internas ou endereços restritos podem não ser reabertos pelo Chrome.
+- Grupos são preservados em novos salvamentos. Coleções antigas sem esses metadados abrem normalmente, sem recriar grupos.
+- Dados antigos incompatíveis são preservados e podem ser exportados, mas a edição de abas dessas coleções pode ficar bloqueada para evitar perda de informações.
+- O armazenamento tem espaço limitado. Uma falha de gravação pode impedir uma operação e, nesse caso, as abas não são fechadas automaticamente.
+- Desinstalar a extensão, apagar o perfil ou limpar seus dados pode remover coleções e cópias locais. Exporte backups regularmente.
+- A lixeira não expira automaticamente. Cópias de recuperação e arquivos exportados anteriormente podem conter itens excluídos depois.
+- O alvo de build e validação atual é o Chrome. Outros navegadores não têm compatibilidade garantida.
+
+## Desenvolvimento
+
+O projeto usa **Vue 3, TypeScript, Lucide e Extension.js**, com Manifest V3. A versão da ferramenta de build e as dependências resolvidas estão fixadas no projeto.
 
 ```bash
-npm start
+npm ci
+npm run dev
 ```
 
-### npm build
+Comandos disponíveis:
 
-**Build for Production**: This command builds your extension for production. It optimizes and bundles your extension, preparing it for deployment to the target browser's store.
+| Comando | Finalidade |
+| --- | --- |
+| `npm run dev` | Desenvolvimento com recompilação após alterações. |
+| `npm start` | Inicia a extensão em modo de produção pela ferramenta de desenvolvimento. |
+| `npm run build` | Gera o build de produção em `dist/chrome`. |
+| `npm test` | Gera o build e executa os testes automatizados. |
+
+Estrutura principal:
+
+```text
+src/                  Interface, armazenamento e funcionalidades
+src/background.ts     Ícone, menu de contexto e comandos de teclado
+src/translations.ts   Traduções PT-BR → EN
+images/               Logo e ícones da extensão
+scripts/              Inclusão da licença e da privacidade no build
+manifest.json         Manifesto de origem
+tests/               Testes de dados e APIs simuladas
+design-review/        Capturas com dados fictícios e registros de revisão
+PRIVACY.md            Política de privacidade
+LICENSE               Licença MIT
+```
+
+Os testes usam a API Chrome simulada; os testes do processo em segundo plano também verificam o código de produção gerado. Depois de mudar recursos que usam o navegador, confira a extensão instalada: salvar/fechar, reabrir seleção e grupos, cancelar lotes, exportar/importar, recuperar dados e usar atalhos. A prévia em uma página web comum não acessa abas reais.
+
+### Gerar um pacote para distribuição
+
+Depois de `npm run build`, compacte **o conteúdo de `dist/chrome`**, com o `manifest.json` na raiz do ZIP. Por exemplo, em um ambiente com o comando `zip`:
 
 ```bash
-npm build
+cd dist/chrome
+zip -r ../../tabsaver-chrome.zip .
 ```
 
-## Learn More
+O build inclui `LICENSE` e `PRIVACY.md` automaticamente. Esse é o pacote compilado para uma release ou para o fluxo de envio à loja. Não inclua `node_modules`, backups pessoais ou o repositório inteiro. A publicação na Chrome Web Store depende também do cadastro, dos materiais da listagem e da revisão da plataforma; gerar o ZIP não publica a extensão.
 
-To learn more about creating cross-browser extensions with Extension.js, visit the [official documentation](https://extension.js.org).
+### Contribuir
 
-## Interface atualizada
+Sugestões e correções são bem-vindas em [Issues](https://github.com/rogerarruda/tabsaver/issues) e pull requests. Descreva o comportamento esperado, as etapas para reproduzir e a versão do Chrome. Use dados fictícios nas capturas e exemplos; não publique suas coleções ou backups pessoais.
 
-Interface em português, com navegação entre coleções, busca por nome, título ou site,
-ordenação, renomeação e painel das abas da janela atual. O formato existente em
-`chrome.storage.local.collections` é mantido. Backup e restauração por arquivo estão disponíveis; sincronização em nuvem fica para uma próxima etapa.
+Para contribuir com código, crie uma branch a partir de `develop`, mantenha as traduções em português e inglês, preserve a compatibilidade dos dados existentes e execute `npm test` antes de enviar o pull request.
 
-Para experimentar no Chrome:
+## Licença
 
-1. Execute `npm run build`.
-2. Acesse `chrome://extensions` e ative o modo de desenvolvedor.
-3. Use **Carregar sem compactação** e selecione a pasta `dist/chrome` deste projeto.
-   Se a extensão já estiver carregada dessa pasta, use **Recarregar**.
-4. Abra uma nova aba.
+Distribuído sob a [licença MIT](LICENSE). Você pode usar, modificar e redistribuir o código conforme os termos da licença, mantendo o aviso de copyright e a licença. As dependências mantêm suas respectivas licenças.
 
-As capturas em `design-review` usam dados fictícios na prévia local. Essa prévia
-não acessa as abas nem as coleções reais da extensão. A compilação e os fluxos de
-criação e busca foram verificados; o fluxo completo de salvar e fechar abas deve
-ser conferido na extensão carregada. O registro de revisão inclui as verificações
-que ainda não foram realizadas.
-
-### Idioma e aparência
-
-Os seletores no topo da página oferecem:
-
-- **Idioma:** Automático, Português (BR) ou English. Automático segue o idioma
-  principal do navegador: português usa PT-BR; os demais idiomas usam inglês.
-- **Aparência:** Sistema, Claro ou Escuro. Sistema acompanha mudanças de aparência
-  sem recarregar a página; uma escolha manual tem prioridade.
-
-As escolhas são salvas separadamente das coleções, em `chrome.storage.local.preferences`,
-e atualizadas nas outras páginas abertas da extensão. Datas e nomes das novas sessões
-usam o idioma escolhido. Nomes de coleções e títulos de páginas existentes são preservados.
-
-Verificação desta etapa: compilação e checagem de tipos dos novos módulos passaram.
-Na prévia foram verificados seleção manual, detecção automática de idioma, retorno ao
-automático, mudanças do tema do sistema, prioridade manual e persistência após recarga.
-O verificador de tipos geral ainda encontra problemas anteriores do exemplo de testes
-(`extension-fixtures` ausente) e da declaração de módulos Vue.
-
-
-### Backup e restauração
-
-Na barra acima das coleções:
-
-- **Exportar backup:** baixa um JSON com todas as coleções salvas e as preferências.
-  O arquivo preserva os dados antigos, inclusive os que não podem ser exibidos.
-- **Restaurar backup:** selecione um arquivo exportado pelo TabSaver (até 20 MB).
-  A prévia informa a quantidade de coleções e abas e a data do backup.
-- **Adicionar às coleções atuais** mantém as existentes e evita repetir coleções
-  idênticas. **Substituir todas as coleções** troca as atuais pelas do arquivo.
-- A restauração de idioma e aparência é opcional. Nenhuma aba aberta é fechada
-  ou reaberta pela importação.
-- **Desfazer restauração** recupera a cópia anterior à última restauração. Essa
-  cópia fica no armazenamento local, disponível mesmo após recarregar a página.
-  Desfazer também substitui alterações feitas desde aquela restauração.
-
-O formato contém `app: "tabsaver"`, `version: 1`, `exportedAt`, `collections` e
-`preferences` e, nos novos arquivos, `trash`. Arquivos inválidos e versões desconhecidas são recusados antes de
-qualquer alteração. A cópia de recuperação usa a chave `backupRecovery` e não
-entra no arquivo exportado. A gravação no Chrome atualiza os dados e a cópia em
-uma única chamada de armazenamento, sem novas permissões.
-
-Verificações: `node --test tests/*.test.cjs`, compilação de produção e conferência
-na prévia de exportação, importação, mesclagem, substituição, preferências,
-recusa de JSON inválido e desfazer após recarregar. A API de armazenamento Chrome
-foi coberta por simulação nos testes; o fluxo instalado deve ser conferido no Chrome.
-
-### Tutorial de primeiros passos
-
-O tutorial abre na primeira visita e pode ser reaberto em **Como usar**, no topo.
-São cinco etapas: configurar/verificar a nova aba, salvar a janela atual, retomar
-coleções, backup e personalização. A ajuda **Não abriu o TabSaver?** explica como
-verificar se a extensão está ativa e possíveis conflitos com outra extensão.
-
-A substituição da nova aba já é declarada em `chrome_url_overrides.newtab`.
-O tutorial orienta essa configuração e oferece um botão para abrir os detalhes
-da extensão em `chrome://extensions`; ele não muda configurações nem desativa
-outras extensões automaticamente. Na prévia local, mostra a orientação de que a
-extensão deve estar instalada para controlar a nova aba.
-
-Concluir, escolher **Ver depois** ou fechar grava `tutorialSeen: true`, sem alterar
-coleções ou preferências. Se essa gravação falhar, o tutorial ainda fecha e mostra
-um aviso. Esse estado local não faz parte do backup das coleções.
-
-Referência: https://developer.chrome.com/docs/extensions/develop/ui/override-chrome-pages
-
-### Acesso pelo ícone
-
-Clique no ícone do TabSaver na barra de ferramentas ou no menu de extensões do
-Chrome para abrir a interface em uma aba. Esse acesso funciona mesmo quando outra
-página é usada como nova aba. O tutorial também explica essa alternativa.
-
-O clique usa o caminho da página declarado no manifesto compilado, sem depender
-de abrir `chrome://newtab`. Não exige permissões adicionais.
-
-O botão **Configurar nova aba**, no topo, abre a primeira etapa do tutorial com a
-ajuda de configuração expandida. Na extensão instalada, oferece acesso direto aos
-detalhes do TabSaver no Chrome. O botão orienta o usuário; não força a ativação do
-override, cuja configuração é controlada pelo Chrome e pelo manifesto.
-
-## Organização e salvamento
-
-- Marque as abas que deseja guardar e escolha **Salvar em**: nova sessão ou uma
-  coleção existente. **Fechar abas após salvar** é opcional e inclui somente as
-  abas selecionadas. Falhas no armazenamento impedem o fechamento.
-- **Ignorar abas duplicadas** evita repetir endereços no destino. Ao abrir uma
-  coleção, endereços já presentes na janela e duplicados internos são ignorados.
-  Consultas e fragmentos diferentes continuam sendo tratados como páginas distintas.
-- Expanda **Ver abas** para adicionar um endereço HTTP/HTTPS, remover uma aba ou
-  movê-la para outra coleção. Os movimentos são gravados em uma única operação.
-- A estrela marca favoritos, que aparecem primeiro; o filtro **Favoritos** mostra
-  somente essas coleções. O lápis permite editar nome e etiquetas separadas por
-  vírgula. A busca também procura nas etiquetas.
-- A **Lixeira** guarda coleções e abas removidas, inclusive após recarregar. Cada
-  item pode ser restaurado ou excluído definitivamente; também é possível esvaziá-la.
-  A antiga cópia da última exclusão é migrada para a lixeira no primeiro carregamento.
-- O lembrete de backup compara os dados com a última exportação preparada. É possível
-  adiar até amanhã. O navegador inicia o download; o TabSaver não confirma se o usuário
-  efetivamente guardou o arquivo. A indicação usa “Última exportação preparada”.
-- Os ícones dos sites vêm do cache de favicons do Chrome, usando a permissão `favicon`;
-  não é usado serviço externo de imagens. Sem ícone disponível, aparece uma inicial.
-- Com a permissão `contextMenus`, o menu de contexto oferece salvar a página ou um link
-  em **Salvos rápidos**, sem fechar a aba. O selo ✓ indica sucesso; ! indica falha.
-- Coleções antigas incompatíveis exibem explicação e dados originais, com opção de
-  copiar para diagnóstico. A edição de abas fica bloqueada nesses casos, mas os dados
-  são preservados no backup e nas alterações às outras coleções.
-
-Google Drive permanece em espera por decisão do usuário. Não há sincronização em nuvem ativa.
-
-### Verificação das melhorias
-
-Execute `npm test` para gerar a extensão e executar os testes. Os testes do worker
-usam o manifesto e o código de produção gerados, com a API Chrome simulada.
-O registro `design-review/improvements-review.json` descreve as conferências da
-interface e os limites de verificação. As capturas usam somente dados fictícios.
-
-Referências das APIs: https://developer.chrome.com/docs/extensions/how-to/ui/favicons
- e https://developer.chrome.com/docs/extensions/reference/api/contextMenus
-
-
-## Navegação e proteção de ações
-
-- **Ver/Ocultar abas** fica no topo e no rodapé da coleção.
-- Arraste uma aba pela alça para um cartão de coleção ou para uma coleção na barra
-  lateral. O destino é destacado. **Mover para** continua disponível como alternativa
-  por teclado e em telas de toque.
-- **Salvar em** oferece busca por nome/etiqueta e uma lista com rolagem limitada,
-  ordenada da coleção mais recente para a mais antiga, sem priorizar favoritos.
-- Fechar uma aba pelo X, salvar e fechar uma seleção e mover itens para a lixeira
-  exigem confirmação em um modal. Cancelar não modifica os dados.
-- Abrir **10 ou mais abas novas** exige confirmação sobre uso de memória. Abas já
-  abertas e duplicadas não entram nessa contagem; a abertura acontece em segundo plano.
-- A lixeira é local e não expira automaticamente. A restauração de uma aba tenta
-  encontrar sua coleção original. Se ela não existir ou for ambígua, recria um
-  recipiente com a aba removida, preservando os metadados disponíveis.
-- A remoção de um item da lixeira e **Esvaziar lixeira** exigem confirmação. Arquivos
-  de backup anteriores continuam podendo conter os dados que foram removidos depois.
-- Backups novos incluem a lixeira. Os antigos continuam aceitos e não apagam a
-  lixeira atual quando ela não está presente no arquivo.
-
-## Salvamento rápido e atalhos de teclado
-
-O botão com raio **Salvar abas**, ao lado de **Nova coleção**, salva todas as abas
-listadas da janela em uma nova sessão, ignorando duplicatas. Antes de fechar as
-abas, sempre mostra a confirmação. As opções e a seleção do painel lateral não
-são usadas como filtro para esse atalho.
-
-Atalhos sugeridos (Option no lugar de Alt no Mac):
-
-- **Alt + Shift + S**: abre o TabSaver na janela de origem e apresenta o salvamento
-  rápido para confirmação. O comando em segundo plano não salva nem fecha abas.
-- **Alt + Shift + T**: abre o TabSaver, com o mesmo comportamento do clique no ícone.
-
-O botão **Atalhos** mostra as combinações efetivamente atribuídas pelo Chrome,
-inclusive quando não há uma combinação atribuída, e oferece acesso a
-`chrome://extensions/shortcuts`. O usuário pode alterar os atalhos e resolver
-conflitos com outros atalhos. Não são interceptadas teclas nos campos da página.
-A solicitação de salvamento rápido é consumida ao abrir a página e não se repete
-por recarregá-la. Se o tutorial inicial estiver aberto, aguarda seu fechamento.
-
-Referência: https://developer.chrome.com/docs/extensions/reference/api/commands
-
-### Reabrir e organizar coleções
-
-- Expanda uma coleção para marcar as abas desejadas e usar **Abrir selecionadas**. **Abrir coleção** continua disponível para abrir todas. As abas salvas permanecem na coleção.
-- As páginas abrem em segundo plano, em lotes de cinco, com uma pausa de um segundo entre os lotes. O progresso aparece no topo e **Interromper abertura** cancela as próximas aberturas. As páginas já abertas permanecem abertas.
-- Dez ou mais novas abas exigem confirmação. Links já abertos na janela e duplicatas são ignorados.
-- A opção de fixar mantém coleções acima das demais, independentemente da ordenação. Favoritos continuam disponíveis separadamente.
-- Use o botão de edição para alterar nome, etiquetas e notas de contexto.
-- A busca mostra abas de todas as coleções por título, endereço e contexto. O nome da coleção no resultado permite localizá-la e expandi-la. Coleções que correspondem ao nome, às notas ou às etiquetas também aparecem, mesmo se estiverem vazias.
-
-### Grupos do Chrome
-
-Novos salvamentos preservam nome, cor e estado recolhido dos grupos. A extensão requer a permissão `tabGroups`; recarregue a extensão após atualizar. Coleções antigas continuam funcionando sem grupos. Ao restaurar, somente páginas novas entram nos grupos recriados; páginas que já estão abertas não são movidas. Selecionar parte das abas recria apenas os grupos necessários. Se um grupo não puder ser recriado, a página continua aberta e a interface informa a falha.
-
-Referências: [Chrome tabGroups](https://developer.chrome.com/docs/extensions/reference/api/tabGroups) e [Chrome tabs](https://developer.chrome.com/docs/extensions/reference/api/tabs).
-
-### Recuperação automática local
-
-Antes de alterar coleções ou a lixeira, o TabSaver grava uma cópia do estado anterior na mesma operação de armazenamento. Isso também se aplica a restaurações de backup e salvamentos pelo menu de contexto. Em **Recuperação local**, escolha uma cópia e confirme para restaurar coleções e lixeira. As abas abertas e as preferências não são alteradas. A restauração cria uma cópia do estado atual antes de substituí-lo.
-
-São mantidas até cinco cópias recentes. O histórico é reduzido quando ultrapassa aproximadamente 4 MiB, preservando ao menos a cópia mais recente. Se não houver espaço para salvar a cópia e a alteração juntas, a operação falha e os dados atuais são mantidos. O histórico local não é incluído na exportação JSON, que contém o estado atual. Essas cópias não protegem contra desinstalação ou perda do perfil: mantenha também backups exportados.
-
-### Densidade da interface
-
-No topo, escolha **Confortável** (padrão) ou **Compacto**. A preferência persiste no navegador e acompanha as exportações de backup. Backups antigos continuam compatíveis; ao restaurar suas preferências, a ausência dessa opção usa o modo confortável.
+Desenvolvido por [Roger Arruda](https://rogerarruda.dev).

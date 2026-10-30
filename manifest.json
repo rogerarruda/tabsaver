@@ -3,7 +3,7 @@
   "manifest_version": 3,
   "version": "0.0.2",
   "name": "tabsaver",
-  "description": "Salve e organize suas abas em cole\u00e7\u00f5es, libere mem\u00f3ria do navegador e retome de onde parou.",
+  "description": "Salve e organize suas abas em coleções, libere memória do navegador e retome de onde parou.",
   "icons": {
     "16": "images/tabsaver-16.png",
     "32": "images/tabsaver-32.png",
@@ -30,7 +30,7 @@
   "chrome_url_overrides": {
     "newtab": "src/index.html"
   },
-  "author": "Your Name",
+  "author": "Roger Arruda",
   "commands": {
     "_execute_action": {
       "suggested_key": {
@@ -43,7 +43,7 @@
         "default": "Alt+Shift+S",
         "mac": "Alt+Shift+S"
       },
-      "description": "Salvar as abas da janela em uma nova cole\u00e7\u00e3o, com confirma\u00e7\u00e3o antes de fechar"
+      "description": "Salvar as abas da janela em uma nova coleção, com confirmação antes de fechar"
     }
   }
 }
