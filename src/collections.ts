@@ -1,4 +1,13 @@
-export type Tab = { id?: number; title: string; url: string }
+export type SavedGroup = { key: string; title: string; color: chrome.tabGroups.ColorEnum; collapsed: boolean }
+export type Tab = { id?: number; title: string; url: string; group?: SavedGroup }
+const groupColors = ['grey', 'blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange']
+function readGroup(value: unknown): SavedGroup | undefined {
+  const group = value as Partial<SavedGroup> | null
+  if (!group || typeof group.key !== 'string' || !group.key || typeof group.title !== 'string' || !groupColors.includes(group.color || '') || typeof group.collapsed !== 'boolean') return
+  return { key: group.key, title: group.title, color: group.color!, collapsed: group.collapsed }
+}
+export function savedTab(tab: Tab): Tab { return { title: tab.title, url: tab.url, ...(tab.group ? { group: { ...tab.group } } : {}) } }
+
 export type Collection = { name: string; tabs: Tab[]; date: string; key?: string; source?: unknown; renamed?: boolean; unreadableTabs?: boolean; tabsChanged?: boolean; notes?: string; pinned?: boolean; favorite?: boolean; tags?: string[]; metadataChanged?: boolean }
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value)
 
@@ -14,7 +23,7 @@ function readTabs(input: unknown): { tabs: Tab[]; unreadable: boolean } {
   let unreadable = false
   for (const item of value) {
     if (record(item) && typeof item.url === 'string' && item.url.trim()) {
-      tabs.push({ url: item.url, title: typeof item.title === 'string' && item.title ? item.title : item.url })
+      tabs.push({ url: item.url, title: typeof item.title === 'string' && item.title ? item.title : item.url, ...(readGroup(item.group) ? { group: readGroup(item.group) } : {}) })
     } else if (typeof item === 'string' && /^https?:\/\//i.test(item)) {
       tabs.push({ url: item, title: item })
     } else unreadable = true
@@ -55,7 +64,7 @@ export function writeCollections(collections: Collection[]): unknown[] {
 
 export function appendTabs(collection: Collection, tabs: Tab[]): Collection {
   if (collection.unreadableTabs) throw new Error('Unreadable legacy tabs')
-  return { ...collection, tabs: [...collection.tabs, ...tabs.map(({ title, url }) => ({ title, url }))], tabsChanged: true }
+  return { ...collection, tabs: [...collection.tabs, ...tabs.map(savedTab)], tabsChanged: true }
 }
 
 export function replaceTabs(collection: Collection, tabs: Tab[]): Collection {

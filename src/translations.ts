@@ -1,5 +1,7 @@
 // Portuguese is the source language. Other browser languages fall back to English.
 export const english: Record<string, string> = {
+  'Grupo sem nome': 'Unnamed group',
+  'As páginas foram abertas, mas alguns grupos não puderam ser recriados.': 'The pages were opened, but some groups could not be recreated.',
   'Resultados em todas as coleções': 'Results across all collections',
   'Mostrar mais resultados': 'Show more results',
   'Notas': 'Notes',
