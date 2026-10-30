@@ -41,7 +41,7 @@ Não selecione o ZIP nem o arquivo `manifest.json` individualmente. Os arquivos 
 
 ### Opção 2: compilar a partir do código-fonte (*from source*)
 
-Requisitos: **Git, Node.js 22 ou superior, npm e Google Chrome**. O ambiente usado na validação foi Node.js 22 com npm 10. Não são necessários conta Google, API key, OAuth ou arquivo `.env`.
+Requisitos: **Git, Node.js 22 ou superior, npm e Google Chrome 111 ou superior**. O ambiente usado na validação foi Node.js 22 com npm 10. Não são necessários conta Google, API key, OAuth ou arquivo `.env`.
 
 A branch `main` contém a versão estável atual; `develop` contém mudanças em desenvolvimento. Para instalar a versão estável:
 
@@ -182,6 +182,7 @@ Ao reabrir uma página ou visitar o site do desenvolvedor, o navegador acessa o 
 - O armazenamento tem espaço limitado. Uma falha de gravação pode impedir uma operação e, nesse caso, as abas não são fechadas automaticamente.
 - Desinstalar a extensão, apagar o perfil ou limpar seus dados pode remover coleções e cópias locais. Exporte backups regularmente.
 - A lixeira não expira automaticamente. Cópias de recuperação e arquivos exportados anteriormente podem conter itens excluídos depois.
+- O Tailwind 4 usa CSS moderno: a extensão requer Chrome 111 ou superior.
 - O alvo de build e validação atual é o Chrome. Outros navegadores não têm compatibilidade garantida.
 
 ## Desenvolvimento
