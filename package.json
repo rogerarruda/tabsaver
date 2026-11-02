@@ -20,7 +20,7 @@
     "postcss": "^8.5.32",
     "tailwindcss": "^4.3.3",
     "tailwindcss-animate": "^1.0.7",
-    "typescript": "5.3.3",
+    "typescript": "7.0.2",
     "@tailwindcss/postcss": "^4.3.3"
   },
   "scripts": {
