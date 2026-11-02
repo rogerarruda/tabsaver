@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.6.2",
-    "extension": "4.1.35",
+    "extension": "4.1.36",
     "postcss": "^8.5.32",
     "tailwindcss": "^4.3.3",
     "tailwindcss-animate": "^1.0.7",
