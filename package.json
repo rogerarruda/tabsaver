@@ -16,12 +16,12 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.6.2",
-    "extension": "4.1.35",
+    "extension": "4.1.39",
     "postcss": "^8.5.32",
-    "tailwindcss": "^4.3.3",
+    "tailwindcss": "^4.3.4",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "5.3.3",
-    "@tailwindcss/postcss": "^4.3.3"
+    "@tailwindcss/postcss": "^4.3.4"
   },
   "scripts": {
     "dev": "extension dev --no-telemetry",
